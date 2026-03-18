@@ -12,7 +12,7 @@ import torch.nn as nn
 
 # CONFIG
 # Define the path to your config file
-config_path = 'config.json'
+config_path = 'multimodal_config.json'
 
 # Open and read the JSON file
 with open(config_path, 'r') as file:
