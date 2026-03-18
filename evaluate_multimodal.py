@@ -1,26 +1,40 @@
+import torch
+import os
+import json
 from transformers import CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
-import torch, os
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader
 from dataset import MultimodalDataset
 from models import CLIPDetector, FLAVADetector
 
 # CONFIG
-model_name = 'flava' # clip, flava
-MAX_LENGTH = 512 # for clip, max length should be 77
-test_file = ""
-output_dir = f""
-image_dir = ""
-BATCH_SIZE = 16
+
+# Define the path to your config file
+config_path = 'multimodal_config.json'
+
+# Open and read the JSON file
+with open(config_path, 'r') as file:
+    config = json.load(file)
+
+# Extract values into variables
+# Options for model_name: 'clip', 'flava'
+model_name = config.get('model_name', 'flava')
+# Note: for 'clip', max length should be 77
+MAX_LENGTH = config.get('MAX_LENGTH', 512)
+test_file = config.get('test_file', '')
+output_dir = config.get('output_dir', '')
+image_dir = config.get('image_dir', '')
+BATCH_SIZE = config.get('BATCH_SIZE', 16)
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 available_models = ['clip', 'flava']
 best_acc = 0
 
-### MODEL SELECTION
+# MODEL SELECTION
 if model_name not in available_models:
     raise ValueError(f'{model_name} not in {available_models}.')
 
-# WEIGHTS 
+# WEIGHTS
 weights = os.listdir(output_dir)
 weights = sorted(weights, key=lambda x: int(x.split('-')[1].split('.')[0]))
 weights = weights[-1]
@@ -38,10 +52,11 @@ elif model_name == 'flava':
     model.load_state_dict(torch.load(weights_dir))
 else:
     pass
+
 model = model.to(device)
 print(f'Model {model_name} loaded at weights: {weights}.')
 
-# DATA 
+# DATA
 test = MultimodalDataset(test_file, image_dir, processor, MAX_LENGTH)
 test_dataloader = DataLoader(test, BATCH_SIZE)
 print(f'Loaded Testing File: {test_file}.')
@@ -54,11 +69,13 @@ with torch.no_grad():
     print('Validating..')
     for j, batchv in enumerate(test_dataloader):
         inputs_val = batchv['inputs']
-        inputs_val = {key: tensor.squeeze(1).to(device) for key, tensor in inputs_val.items()}
+        inputs_val = {key: tensor.squeeze(1).to(
+            device) for key, tensor in inputs_val.items()}
         label_val = batchv['label'].numpy().tolist()
         output_val = model(inputs_val).squeeze(1).to(torch.float64)
         predictions = torch.sigmoid(output_val)
-        predictions = torch.where(predictions > 0.5, 1, 0).detach().cpu().numpy().tolist()
+        predictions = torch.where(
+            predictions > 0.5, 1, 0).detach().cpu().numpy().tolist()
         pred_val.extend(predictions)
         labels_val.extend(label_val)
 

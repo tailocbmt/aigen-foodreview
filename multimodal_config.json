@@ -1,0 +1,14 @@
+{
+  "model_name": "clip",
+  "MAX_LENGTH": 77,
+  "train_file": "../data/aigen_food_review/train.csv",
+  "val_file": "../data/aigen_food_review/val.csv",
+  "test_file": "../data/aigen_food_review/test.csv",
+  "logging_file": "train",
+  "output_dir": "logging",
+  "image_dir": "../data/aigen_food_review/images",
+  "EPOCHS": 100,
+  "BATCH_SIZE": 16,
+  "LR": 0.0001,
+  "EARLY_STOP": 5
+}
