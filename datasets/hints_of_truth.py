@@ -78,7 +78,7 @@ def main():
 
             if not original_text:
                 print(f"Row {i} has no text, skipping...")
-                csv_writer.writerow([i, '', 'FAILED_NO_TEXT', ''])
+                csv_writer.writerow([i, '', 'FAILED_NO_TEXT'])
                 continue
 
             try:
@@ -100,17 +100,17 @@ def main():
                 image_result.save(image_relative_path)
 
                 # 2. Generate Caption using Llava
-                llava_caption = get_llava_caption(
-                    image_relative_path, original_text)
+                # llava_caption = get_llava_caption(
+                #     image_relative_path, original_text)
 
                 # 3. Write all data to CSV
                 csv_writer.writerow(
-                    [i, original_text, image_filename, llava_caption])
+                    [i, original_text, image_filename])
 
             except Exception as e:
                 print(f"\nError processing index {i}: {e}")
                 csv_writer.writerow(
-                    [i, original_text, 'FAILED_GPU_ERROR', 'FAILED_GPU_ERROR'])
+                    [i, original_text, 'FAILED_GPU_ERROR'])
                 continue
 
         csv_file.close()
