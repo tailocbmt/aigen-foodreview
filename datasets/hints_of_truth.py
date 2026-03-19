@@ -69,13 +69,14 @@ def main():
             ['original_index', 'original_text', 'saved_image_path', 'llava_caption'])
 
         print(f"\nStarting generation of {split} split")
-        dataset = full_dataset[split]
+        dataset = load_dataset("michiel/hints_of_truth", split=split)
         print(dataset)
         print(len(dataset))
         # Fixed loop to use len(dataset) instead of len(full_dataset)
         for i in tqdm(range(len(dataset)), desc=f"Generating {split} Data"):
 
             original_text = dataset[i].get('text', '')
+            print(original_text)
 
             if not original_text:
                 print(f"Row {i} has no text, skipping...")
