@@ -70,7 +70,8 @@ def main():
 
         print(f"\nStarting generation of {split} split")
         dataset = full_dataset[split]
-
+        print(dataset)
+        print(len(dataset))
         # Fixed loop to use len(dataset) instead of len(full_dataset)
         for i in tqdm(range(len(dataset)), desc=f"Generating {split} Data"):
 
