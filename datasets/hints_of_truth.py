@@ -21,7 +21,7 @@ def initialize_models():
     print(f"Loading FLUX model: {IMAGE_MODEL_ID}...")
 
     # FLUX requires bfloat16 for optimal memory usage and quality
-    pipe = FluxPipeline.frompretrained(
+    pipe = FluxPipeline.from_pretrained(
         IMAGE_MODEL_ID,
         torch_dtype=torch.bfloat16
     )
