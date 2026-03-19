@@ -93,6 +93,8 @@ def main():
                     width=512,
                     max_sequence_length=256
                 ).images[0]
+                print(image_result)
+                image_result.save("flux-schnell.png")
 
                 # Fixed filename to include the split so they don't overwrite each other
                 image_filename = f"{split}_img_{i:04d}.png"
