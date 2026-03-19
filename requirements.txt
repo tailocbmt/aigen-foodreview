@@ -1,8 +1,9 @@
+torch==2.7.1+cu118
 torch==1.12.0
 transformers==4.25.0
 scikit-learn
 pandas==1.3.5
-torchvision==0.13.0
-Pillow==10.0.1
-
-
+torchvision==0.22.1+cu118
+datasets
+Pillow
+ollama
