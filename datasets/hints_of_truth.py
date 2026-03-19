@@ -3,26 +3,42 @@ import csv
 import torch
 import ollama
 from datasets import load_dataset
-from diffusers import FluxPipeline
+from diffusers import FluxPipeline, FluxTransformer2DModel, GGUFQuantizationConfig
 from PIL import Image
 from tqdm import tqdm
 
 # --- Configuration ---
 OUTPUT_DIR = "generated_fake_images"
 CSV_OUTPUT_NAME = "generated_images_{split}.csv"
-IMAGE_MODEL_ID = "black-forest-labs/FLUX.1-schnell"
+IMAGE_MODEL_ID = "city96/FLUX.1-schnell-gguf"
 OLLAMA_MODEL = "llava:7b"  # Added Llava model configuration
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 def initialize_models():
-    """Initializes the FLUX pipeline on GPU."""
-    print(f"Loading FLUX model: {IMAGE_MODEL_ID}...")
+    """Initializes the FLUX pipeline using the Q8_0 GGUF model."""
+    print("Loading the 12.7GB GGUF transformer...")
 
-    # FLUX requires bfloat16 for optimal memory usage and quality
+    # NOTE: You can use the Hugging Face URL directly, OR if you already downloaded
+    # the 12.7GB file to your server, replace this URL with the local file path
+    # (e.g., ckpt_path = "./flux1-schnell-Q8_0.gguf")
+    ckpt_path = "https://huggingface.co/city96/FLUX.1-schnell-gguf/blob/main/flux1-schnell-Q8_0.gguf"
+
+    # 1. Load the massive transformer using the new GGUF single-file loader
+    transformer = FluxTransformer2DModel.from_single_file(
+        ckpt_path,
+        quantization_config=GGUFQuantizationConfig(
+            compute_dtype=torch.bfloat16),
+        torch_dtype=torch.bfloat16,
+    )
+
+    print("Loading the rest of the FLUX pipeline...")
+
+    # 2. Load the pipeline, passing in our custom GGUF transformer
     pipe = FluxPipeline.from_pretrained(
-        IMAGE_MODEL_ID,
+        "black-forest-labs/FLUX.1-schnell",
+        transformer=transformer,
         torch_dtype=torch.bfloat16
     )
 
