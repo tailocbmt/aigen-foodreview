@@ -10,7 +10,7 @@ from tqdm import tqdm
 # --- Configuration ---
 OUTPUT_DIR = "generated_fake_images"
 CSV_OUTPUT_NAME = "generated_images_{split}.csv"
-IMAGE_MODEL_ID = "https: // huggingface.co/city96/FLUX.1-schnell-gguf/blob/main/flux1-schnell-Q8_0.gguf"
+IMAGE_MODEL_ID = "https://huggingface.co/city96/FLUX.1-schnell-gguf/blob/main/flux1-schnell-Q8_0.gguf"
 OLLAMA_MODEL = "llava:7b"  # Added Llava model configuration
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
