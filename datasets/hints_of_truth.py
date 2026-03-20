@@ -88,11 +88,11 @@ def main():
         dataset = full_dataset[split]
         print(dataset)
         print(len(dataset))
+
         # Fixed loop to use len(dataset) instead of len(full_dataset)
         for i in tqdm(range(len(dataset)), desc=f"Generating {split} Data"):
 
             original_text = dataset[i]['text']
-            print(original_text)
 
             if not original_text:
                 print(f"Row {i} has no text, skipping...")
@@ -109,7 +109,7 @@ def main():
                     width=512,
                     max_sequence_length=256
                 ).images[0]
-                print(image_result)
+
                 image_result.save("flux-schnell.png")
 
                 # Fixed filename to include the split so they don't overwrite each other
@@ -126,6 +126,13 @@ def main():
                 # 3. Write all data to CSV
                 csv_writer.writerow(
                     [i, original_text, image_filename])
+
+                # Delete the variable so Python knows it is no longer needed
+                del image_result
+                # Force Python to immediately sweep System RAM
+                gc.collect()
+                # Force PyTorch to immediately sweep GPU VRAM
+                torch.cuda.empty_cache()
 
             except Exception as e:
                 print(f"\nError processing index {i}: {e}")
