@@ -104,12 +104,10 @@ def main():
                     prompt=original_text,
                     num_inference_steps=4,
                     guidance_scale=0.0,
-                    height=512,
-                    width=512,
+                    height=384,
+                    width=384,
                     max_sequence_length=256
                 ).images[0]
-
-                image_result.save("flux-schnell.png")
 
                 # Fixed filename to include the split so they don't overwrite each other
                 image_filename = f"{split}_img_{i:04d}.png"
