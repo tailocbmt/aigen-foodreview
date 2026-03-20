@@ -105,8 +105,8 @@ def main():
                         prompt=original_text,
                         num_inference_steps=4,
                         guidance_scale=0.0,
-                        height=384,
-                        width=384,
+                        height=512,
+                        width=512,
                         max_sequence_length=256
                     ).images[0]
 
