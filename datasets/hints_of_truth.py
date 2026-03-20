@@ -129,8 +129,6 @@ def main():
 
                 # Delete the variable so Python knows it is no longer needed
                 del image_result
-                # Force Python to immediately sweep System RAM
-                gc.collect()
                 # Force PyTorch to immediately sweep GPU VRAM
                 torch.cuda.empty_cache()
 
