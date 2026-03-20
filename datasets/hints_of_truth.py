@@ -10,7 +10,7 @@ from tqdm import tqdm
 # --- Configuration ---
 OUTPUT_DIR = "generated_fake_images"
 CSV_OUTPUT_NAME = "generated_images_{split}.csv"
-IMAGE_MODEL_ID = "city96/FLUX.1-schnell-gguf"
+IMAGE_MODEL_ID = "https://huggingface.co/city96/FLUX.1-schnell-gguf/blob/main/flux1-schnell-Q8_0.gguf"
 OLLAMA_MODEL = "llava:7b"  # Added Llava model configuration
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -23,11 +23,10 @@ def initialize_models():
     # NOTE: You can use the Hugging Face URL directly, OR if you already downloaded
     # the 12.7GB file to your server, replace this URL with the local file path
     # (e.g., ckpt_path = "./flux1-schnell-Q8_0.gguf")
-    ckpt_path = "https://huggingface.co/city96/FLUX.1-schnell-gguf/blob/main/flux1-schnell-Q8_0.gguf"
 
     # 1. Load the massive transformer using the new GGUF single-file loader
     transformer = FluxTransformer2DModel.from_single_file(
-        ckpt_path,
+        IMAGE_MODEL_ID,
         quantization_config=GGUFQuantizationConfig(
             compute_dtype=torch.bfloat16),
         torch_dtype=torch.bfloat16,
@@ -82,7 +81,7 @@ def main():
         csv_writer = csv.writer(csv_file)
         # Added llava_caption to the header
         csv_writer.writerow(
-            ['original_index', 'original_text', 'saved_image_path', 'llava_caption'])
+            ['original_index', 'original_text', 'saved_image_path'])
 
         print(f"\nStarting generation of {split} split")
         dataset = full_dataset[split]
