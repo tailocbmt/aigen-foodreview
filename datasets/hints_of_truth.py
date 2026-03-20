@@ -1,6 +1,7 @@
 import os
 import csv
 import torch
+import gc
 import ollama
 from datasets import load_dataset
 from diffusers import FluxPipeline, FluxTransformer2DModel, GGUFQuantizationConfig
@@ -42,7 +43,7 @@ def initialize_models():
     )
 
     # enable_model_cpu_offload() is highly recommended for FLUX on a 24GB RTX 3090
-    pipe.enable_model_cpu_offload()
+    pipe.to("cuda")
 
     return pipe
 
@@ -128,6 +129,7 @@ def main():
                 # Delete the variable so Python knows it is no longer needed
                 del image_result
                 # Force PyTorch to immediately sweep GPU VRAM
+                gc.collect()             # <-- Sweeps Python System RAM
                 torch.cuda.empty_cache()
                 # --- NEW: Tell PyTorch to defragment the RAM if possible ---
                 if hasattr(torch.classes, 'cpu'):
