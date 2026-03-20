@@ -74,7 +74,7 @@ def main():
     print("\nLoading dataset 'michiel/hints_of_truth'...")
     full_dataset = load_dataset("michiel/hints_of_truth")
 
-    for split in ['dev1', 'dev2', 'test']:
+    for split in ['test']:
         csv_file_path = os.path.join(
             OUTPUT_DIR, CSV_OUTPUT_NAME.format(split=split))
 
@@ -132,8 +132,6 @@ def main():
                 gc.collect()             # <-- Sweeps Python System RAM
                 torch.cuda.empty_cache()
                 # --- NEW: Tell PyTorch to defragment the RAM if possible ---
-                if hasattr(torch.classes, 'cpu'):
-                    torch.cpu.empty_cache()
 
             except Exception as e:
                 print(f"\nError processing index {i}: {e}")
