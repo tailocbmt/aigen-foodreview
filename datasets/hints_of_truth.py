@@ -100,14 +100,15 @@ def main():
 
             try:
                 # 1. Generate Image using FLUX.1-schnell
-                image_result = pipe(
-                    prompt=original_text,
-                    num_inference_steps=4,
-                    guidance_scale=0.0,
-                    height=384,
-                    width=384,
-                    max_sequence_length=256
-                ).images[0]
+                with torch.inference_mode():
+                    image_result = pipe(
+                        prompt=original_text,
+                        num_inference_steps=4,
+                        guidance_scale=0.0,
+                        height=384,
+                        width=384,
+                        max_sequence_length=256
+                    ).images[0]
 
                 # Fixed filename to include the split so they don't overwrite each other
                 image_filename = f"{split}_img_{i:04d}.png"
@@ -128,6 +129,9 @@ def main():
                 del image_result
                 # Force PyTorch to immediately sweep GPU VRAM
                 torch.cuda.empty_cache()
+                # --- NEW: Tell PyTorch to defragment the RAM if possible ---
+                if hasattr(torch.classes, 'cpu'):
+                    torch.cpu.empty_cache()
 
             except Exception as e:
                 print(f"\nError processing index {i}: {e}")
