@@ -56,7 +56,7 @@ def get_llava_caption(image_path, original_text):
             messages=[
                 {
                     'role': 'user',
-                    'content': f"Here is the original text that inspired this image: '{original_text}'. Please provide a realistic, concise, and descriptive caption for what is actually shown in the image.",
+                    'content': f"Here is the original caption of this image: '{original_text}'. Please provide a human-like, realistic, concise, and descriptive caption for what is actually shown in the image.",
                     # Ollama Python client accepts file paths directly
                     'images': [image_path]
                 }
