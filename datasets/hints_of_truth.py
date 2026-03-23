@@ -2,7 +2,6 @@ import os
 import csv
 import torch
 import gc
-import ollama
 from datasets import load_dataset
 from diffusers import FluxPipeline, FluxTransformer2DModel, GGUFQuantizationConfig
 from PIL import Image
@@ -46,26 +45,6 @@ def initialize_models():
     pipe.to("cuda")
 
     return pipe
-
-
-def get_llava_caption(image_path, original_text):
-    """Uses Llava to generate a realistic caption based on the image and original text."""
-    try:
-        response = ollama.chat(
-            model=OLLAMA_MODEL,
-            messages=[
-                {
-                    'role': 'user',
-                    'content': f"Here is the original caption of this image: '{original_text}'. Please provide a human-like, realistic, concise, and descriptive caption for what is actually shown in the image.",
-                    # Ollama Python client accepts file paths directly
-                    'images': [image_path]
-                }
-            ]
-        )
-        return response['message']['content'].strip()
-    except Exception as e:
-        print(f"\nError calling Ollama Llava: {e}")
-        return "FAILED_LLAVA_ERROR"
 
 
 def main():
@@ -118,11 +97,7 @@ def main():
                 # Save the image to disk FIRST so Llava can read the file
                 image_result.save(image_relative_path)
 
-                # 2. Generate Caption using Llava
-                # llava_caption = get_llava_caption(
-                #     image_relative_path, original_text)
-
-                # 3. Write all data to CSV
+                # 2. Write all data to CSV
                 csv_writer.writerow(
                     [i, original_text, image_filename])
 

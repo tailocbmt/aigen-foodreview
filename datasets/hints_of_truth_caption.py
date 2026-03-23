@@ -36,9 +36,18 @@ def get_llava_caption(llava_pipe, image_path, original_text):
     ]
 
     with torch.no_grad():
-        out = llava_pipe(text=messages, max_new_tokens=50)
+        # max_length=None added to suppress the length warning!
+        out = llava_pipe(text=messages, max_new_tokens=50, max_length=None)
 
-    return out[0]['generated_text'].strip()
+    generated_data = out[0]['generated_text']
+
+    # If the pipeline returns the full conversation history as a list:
+    if isinstance(generated_data, list):
+        # Grab the 'content' of the final assistant response
+        return generated_data[-1]['content'].strip()
+
+    # If the pipeline returns a standard string:
+    return generated_data.strip()
 
 
 def main():
@@ -59,8 +68,8 @@ def main():
         df = pd.read_csv(csv_file_path)
 
         # 2. Create the new column if it doesn't exist yet
-        if 'llava_caption' not in df.columns:
-            df['llava_caption'] = None
+        if 'llava_generated_caption' not in df.columns:
+            df['llava_generated_caption'] = None
 
         # 3. Iterate through the DataFrame rows
         for index, row in tqdm(df.iterrows(), total=len(df), desc=f"Captioning {split}"):
@@ -68,13 +77,13 @@ def main():
             image_filename = str(row['saved_image_path'])
 
             # Resume Feature: Skip if it already has a valid caption
-            existing_caption = str(row.get('llava_caption', ''))
-            if pd.notna(row.get('llava_caption')) and existing_caption not in ['None', '', 'nan', 'FAILED_LLAVA_ERROR']:
+            existing_caption = str(row.get('llava_generated_caption', ''))
+            if pd.notna(row.get('llava_generated_caption')) and existing_caption not in ['None', '', 'nan', 'FAILED_LLAVA_ERROR']:
                 continue
 
             # Handle rows where FLUX previously failed to generate an image
             if 'FAILED' in image_filename:
-                df.at[index, 'llava_caption'] = 'FAILED_NO_IMAGE'
+                df.at[index, 'llava_generated_caption'] = 'FAILED_NO_IMAGE'
                 continue
 
             image_relative_path = os.path.join(INPUT_DIR, image_filename)
@@ -83,10 +92,10 @@ def main():
                 caption = get_llava_caption(
                     llava_pipe, image_relative_path, text)
                 # Append the newly generated caption to the specific cell
-                df.at[index, 'llava_caption'] = caption
+                df.at[index, 'llava_generated_caption'] = caption
             except Exception as e:
                 print(f"\nError captioning index {index}: {e}")
-                df.at[index, 'llava_caption'] = 'FAILED_LLAVA_ERROR'
+                df.at[index, 'llava_generated_caption'] = 'FAILED_LLAVA_ERROR'
 
             # Optional: Save every 50 images so you don't lose progress if it crashes
             if index % 50 == 0:
