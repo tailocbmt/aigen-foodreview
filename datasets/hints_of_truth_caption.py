@@ -1,13 +1,49 @@
+import csv
 import os
 import pandas as pd
 import torch
 from transformers import pipeline
+from datasets import load_dataset
 from tqdm import tqdm
 
 # --- Configuration ---
-INPUT_DIR = "generated_fake_images"
-INPUT_CSV_NAME = "generated_images_{split}.csv"
+OUTPUT_DIR = "original_image_captions"
+CSV_OUTPUT_NAME = "original_captions_{split}.csv"
 LLAVA_MODEL_ID = "llava-hf/llava-1.5-7b-hf"
+BLIP_MODEL_ID = "Salesforce/blip-image-captioning-large"
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+
+def initialize_blip():
+    """Initializes BLIP in standard 16-bit precision."""
+    print(f"Loading {BLIP_MODEL_ID} in float16...")
+
+    blip_pipe = pipeline(
+        "image-to-text",  # Changed from image-text-to-text
+        model=BLIP_MODEL_ID,
+        torch_dtype=torch.float16,
+        device_map="auto"
+    )
+    return blip_pipe
+
+
+def get_blip_caption(blip_pipe, image_path):
+    """Generates a pure description using the BLIP Pipeline."""
+
+    # BLIP doesn't need conversational instructions. You just pass the image!
+    with torch.no_grad():
+        out = blip_pipe(image_path, max_new_tokens=50)
+
+    generated_data = out[0]['generated_text']
+
+    # If the pipeline returns the full conversation history as a list:
+    if isinstance(generated_data, list):
+        # Grab the 'content' of the final assistant response
+        return generated_data[-1]['content'].strip()
+
+    # If the pipeline returns a standard string:
+    return generated_data.strip()
 
 
 def initialize_llava():
@@ -29,7 +65,7 @@ def get_llava_caption(llava_pipe, image_path, original_text):
         {
             "role": "user",
             "content": [
-                {"type": "image", "url": image_path},
+                {"type": "image", "image": image_path},
                 {"type": "text", "text": f"Here is the original text that inspired this image: '{original_text}'. Please provide a realistic, concise, and descriptive caption for what is actually shown in the image."},
             ],
         },
@@ -53,57 +89,54 @@ def get_llava_caption(llava_pipe, image_path, original_text):
 def main():
     llava_pipe = initialize_llava()
 
-    for split in ['dev1', 'dev2', 'test']:
-        csv_file_path = os.path.join(
-            INPUT_DIR, INPUT_CSV_NAME.format(split=split))
+    # 2. Load the Original Dataset
+    print("\nLoading dataset 'michiel/hints_of_truth'...")
+    full_dataset = load_dataset("michiel/hints_of_truth")
 
-        if not os.path.exists(csv_file_path):
-            print(
-                f"\nCould not find {csv_file_path}, skipping {split} split...")
+    for split in ['dev1', 'dev2', 'test']:
+        if split not in full_dataset:
+            print(f"Split '{split}' not found in dataset. Skipping.")
             continue
 
-        print(f"\nProcessing captions for {split} split...")
+        dataset = full_dataset[split]
+        csv_file_path = os.path.join(
+            OUTPUT_DIR, CSV_OUTPUT_NAME.format(split=split))
 
-        # 1. Load the CSV into a Pandas DataFrame
-        df = pd.read_csv(csv_file_path)
+        print(f"\nProcessing original images for {split} split...")
 
-        # 2. Create the new column if it doesn't exist yet
-        if 'llava_generated_caption' not in df.columns:
-            df['llava_generated_caption'] = None
+        # Open a new CSV file to record the results
+        with open(csv_file_path, mode='w', newline='', encoding='utf-8') as file:
+            csv_writer = csv.writer(file)
+            csv_writer.writerow(['index', 'original_text', 'llava_caption'])
 
-        # 3. Iterate through the DataFrame rows
-        for index, row in tqdm(df.iterrows(), total=len(df), desc=f"Captioning {split}"):
-            text = row['original_text']
-            image_filename = str(row['saved_image_path'])
+            # Iterate through the dataset
+            for i in tqdm(range(len(dataset)), desc=f"Captioning {split}"):
+                item = dataset[i]
 
-            # Resume Feature: Skip if it already has a valid caption
-            existing_caption = str(row.get('llava_generated_caption', ''))
-            if pd.notna(row.get('llava_generated_caption')) and existing_caption not in ['None', '', 'nan', 'FAILED_LLAVA_ERROR']:
-                continue
+                # Extract text and the native PIL Image object from the dataset
+                text = item.get('text', '')
+                image = item.get('image')
 
-            # Handle rows where FLUX previously failed to generate an image
-            if 'FAILED' in image_filename:
-                df.at[index, 'llava_generated_caption'] = 'FAILED_NO_IMAGE'
-                continue
+                if image is None:
+                    csv_writer.writerow(
+                        [i, text, 'FAILED_NO_IMAGE_IN_DATASET'])
+                    continue
 
-            image_relative_path = os.path.join(INPUT_DIR, image_filename)
+                try:
+                    # The llava pipeline natively accepts PIL Images in memory!
+                    with torch.no_grad():
+                        out = get_llava_caption(llava_pipe, image, text)
 
-            try:
-                caption = get_llava_caption(
-                    llava_pipe, image_relative_path, text)
-                # Append the newly generated caption to the specific cell
-                df.at[index, 'llava_generated_caption'] = caption
-            except Exception as e:
-                print(f"\nError captioning index {index}: {e}")
-                df.at[index, 'llava_generated_caption'] = 'FAILED_LLAVA_ERROR'
+                    caption = out[0]['generated_text'].strip()
 
-            # Optional: Save every 50 images so you don't lose progress if it crashes
-            if index % 50 == 0:
-                df.to_csv(csv_file_path, index=False)
+                    # Write to CSV
+                    csv_writer.writerow([i, text, caption])
 
-        # 4. Final Save: Overwrite the CSV without the pandas index column
-        df.to_csv(csv_file_path, index=False)
-        print(f"\nFinished updating {csv_file_path}")
+                except Exception as e:
+                    print(f"\nError captioning index {i}: {e}")
+                    csv_writer.writerow([i, text, 'FAILED_BLIP_ERROR'])
+
+        print(f"Finished saving {csv_file_path}")
 
 
 if __name__ == "__main__":
