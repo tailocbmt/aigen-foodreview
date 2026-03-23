@@ -3,20 +3,48 @@ import csv
 import torch
 import gc
 from datasets import load_dataset
-from diffusers import FluxPipeline, FluxTransformer2DModel, GGUFQuantizationConfig
+from diffusers import FluxPipeline, FluxTransformer2DModel, GGUFQuantizationConfig, StableDiffusion3Pipeline, SD3Transformer2DModel, GGUFQuantizationConfig
 from PIL import Image
 from tqdm import tqdm
 
 # --- Configuration ---
-OUTPUT_DIR = "generated_fake_images"
+OUTPUT_DIR = "generated_sd_fake_images"
 CSV_OUTPUT_NAME = "generated_images_{split}.csv"
-IMAGE_MODEL_ID = "https://huggingface.co/city96/FLUX.1-schnell-gguf/blob/main/flux1-schnell-Q8_0.gguf"
+IMAGE_MODEL_ID = "https://huggingface.co/city96/stable-diffusion-3.5-large-turbo-gguf/blob/main/sd3.5_large_turbo-F16.gguf"
 OLLAMA_MODEL = "llava:7b"  # Added Llava model configuration
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
-def initialize_models():
+def initialize_sd_models():
+    """Initializes the SD3.5 Turbo pipeline using the Q8_0 GGUF model."""
+    print("Loading the SD3.5 Large Turbo GGUF transformer...")
+
+    # 1. Load the transformer using the SD3-specific single file loader
+    transformer = SD3Transformer2DModel.from_single_file(
+        IMAGE_MODEL_ID,
+        quantization_config=GGUFQuantizationConfig(
+            compute_dtype=torch.bfloat16),
+        torch_dtype=torch.bfloat16,
+    )
+
+    print("Loading the rest of the SD3.5 pipeline...")
+
+    # 2. Load the pipeline using the SD3 base model, passing in our custom GGUF transformer
+    pipe = StableDiffusion3Pipeline.from_pretrained(
+        "stabilityai/stable-diffusion-3.5-large-turbo",
+        transformer=transformer,
+        torch_dtype=torch.bfloat16
+    )
+
+    # Move directly to the RTX 3090's VRAM
+    print("Moving model to GPU...")
+    pipe.to("cuda")
+
+    return pipe
+
+
+def initialize_flux_models():
     """Initializes the FLUX pipeline using the Q8_0 GGUF model."""
     print("Loading the 12.7GB GGUF transformer...")
 
@@ -48,7 +76,7 @@ def initialize_models():
 
 
 def main():
-    pipe = initialize_models()
+    pipe = initialize_sd_models()
 
     print("\nLoading dataset 'michiel/hints_of_truth'...")
     full_dataset = load_dataset("michiel/hints_of_truth")
@@ -87,7 +115,7 @@ def main():
                         guidance_scale=0.0,
                         height=512,
                         width=512,
-                        max_sequence_length=256
+                        # max_sequence_length=256
                     ).images[0]
 
                 # Fixed filename to include the split so they don't overwrite each other
