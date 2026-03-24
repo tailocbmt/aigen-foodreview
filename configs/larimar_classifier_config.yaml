@@ -56,7 +56,7 @@ output:
   results_dir: "./outputs/results"
 
 wandb:
-  project: null
+  project: "Multimodal synthesis data detection"
   run_name: null
-  api_key: null
+  api_key: "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"
   log_every_n_steps: 50

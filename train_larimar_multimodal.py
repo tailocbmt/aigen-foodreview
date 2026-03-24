@@ -106,7 +106,7 @@ class MultimodalClassifierTrainer:
 
             wandb.init(
                 project=wandb_cfg.get(
-                    "project", "multimodal-classifier"),
+                    "project", "Multimodal synthesis data detection"),
                 config=self.config,
                 name=wandb_cfg.get("run_name", None)
             )
