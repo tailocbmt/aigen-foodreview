@@ -127,6 +127,7 @@ def main():
                     with torch.no_grad():
                         out = get_llava_caption(llava_pipe, image, text)
 
+                    print(out)
                     caption = out
 
                     # Write to CSV

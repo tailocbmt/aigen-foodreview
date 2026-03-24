@@ -69,8 +69,8 @@ class LocalFakeCSVDataset(Dataset):
     Fake samples from local CSV + image folder.
 
     Required CSV columns:
-        - text
-        - image_path
+        - llava_caption
+        - saved_image_path
 
     Optional:
         - if CSV has labels, they are ignored here because this dataset is fake-only
@@ -94,7 +94,7 @@ class LocalFakeCSVDataset(Dataset):
 
         self.df = pd.read_csv(csv_path)
 
-        required_cols = ["text", "image_path"]
+        required_cols = ["llava_caption", "saved_image_path"]
         for col in required_cols:
             if col not in self.df.columns:
                 raise ValueError(
@@ -116,8 +116,8 @@ class LocalFakeCSVDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         row = self.df.iloc[idx]
 
-        text = str(row["text"])
-        image_path = self._resolve_image_path(row["image_path"])
+        text = str(row["llava_caption"])
+        image_path = self._resolve_image_path(row["saved_image_path"])
 
         if not image_path.exists():
             raise FileNotFoundError(f"Image not found: {image_path}")
