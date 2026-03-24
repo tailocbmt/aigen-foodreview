@@ -578,19 +578,19 @@ def main():
     parser.add_argument(
         "--config",
         type=str,
-        default="configs/classifier_config.yaml",
+        default="configs/larimar_classifier_config.yaml",
         help="Path to configuration file"
     )
     parser.add_argument(
         "--max_epochs",
         type=int,
-        default=None,
+        default=50,
         help="Override max epochs from config"
     )
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=None,
+        default=16,
         help="Override batch size from config"
     )
     parser.add_argument(
