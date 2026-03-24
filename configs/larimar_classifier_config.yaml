@@ -1,0 +1,62 @@
+model:
+  text_model_name: "bert-base-uncased"
+  vision_model_name: "openai/clip-vit-base-patch32"
+  tokenizer_name: "bert-base-uncased"
+
+  fusion_hidden_size: 256
+  fusion_num_heads: 8
+  fusion_num_layers: 2
+
+  memory_size: 1024
+  episode_dim: 512
+  memory_alpha: 0.1
+  direct_writing: true
+
+  classifier_hidden_dim: 256
+  num_classes: 2
+  dropout: 0.1
+
+data:
+  tokenizer_name: "bert-base-uncased"
+  vision_model_name: "openai/clip-vit-base-patch32"
+  max_text_length: 128
+
+  # Real splits from Hugging Face dataset
+  real_train_split: "dev1"
+  real_val_split: "dev2"
+  real_test_split: "test"
+
+  # Your fake data
+  fake_train_csv: "./generated_fake_images/generated_images_dev1.csv"
+  fake_train_image_root: "./generated_fake_images"
+
+  fake_val_csv: "./generated_fake_images/generated_images_dev2.csv"
+  fake_val_image_root: "./generated_fake_images"
+
+  # Optional: if you also made fake test data
+  fake_test_csv: "./generated_fake_images/generated_images_test.csv"
+  fake_test_image_root: "./generated_fake_images"
+
+  batch_size: 16
+  num_workers: 4
+  pin_memory: true
+  drop_last: false
+
+training:
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-2
+  max_epochs: 50
+  gradient_clip_val: 1.0
+  scheduler: "cosine"
+  min_lr: 1.0e-6
+
+output:
+  checkpoint_dir: "./outputs/checkpoints"
+  log_dir: "./outputs/logs"
+  results_dir: "./outputs/results"
+
+wandb:
+  project: null
+  run_name: null
+  api_key: null
+  log_every_n_steps: 50
