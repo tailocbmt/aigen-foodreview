@@ -4,7 +4,7 @@ Handles multimodal classification training with episodic memory
 """
 
 from larimar_base.models import create_multimodal_classifier, count_parameters
-from datasets.dataset import create_data_module
+from datasets.multimodal_datasets import create_data_module
 import os
 import sys
 import argparse
