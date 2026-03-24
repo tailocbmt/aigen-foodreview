@@ -27,14 +27,14 @@ data:
   real_test_split: "test"
 
   # Your fake data
-  fake_train_csv: "./generated_fake_images/generated_images_dev1.csv"
+  fake_train_csv: "./data/dev1.csv"
   fake_train_image_root: "./generated_fake_images"
 
-  fake_val_csv: "./generated_fake_images/generated_images_dev2.csv"
+  fake_val_csv: "./data/dev2.csv"
   fake_val_image_root: "./generated_fake_images"
 
   # Optional: if you also made fake test data
-  fake_test_csv: "./generated_fake_images/generated_images_test.csv"
+  fake_test_csv: "./data/test.csv"
   fake_test_image_root: "./generated_fake_images"
 
   batch_size: 16

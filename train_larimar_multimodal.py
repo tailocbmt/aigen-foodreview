@@ -1,10 +1,3 @@
-"""
-Training script for BitMarMultimodalClassifier
-Handles multimodal classification training with episodic memory
-"""
-
-from larimar_base.models import create_multimodal_classifier, count_parameters
-from datasets.multimodal_datasets import create_data_module
 import os
 import sys
 import argparse
@@ -20,6 +13,8 @@ import torch
 import torch.nn.functional as F
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
+from larimar_base.models import create_multimodal_classifier, count_parameters
+from modules.multimodal_datasets import create_data_module
 
 # Optional wandb
 try:
