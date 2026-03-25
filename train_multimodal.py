@@ -114,9 +114,9 @@ else:
     train = MultimodalDataset(train_file, image_dir, processor, MAX_LENGTH)
     val = MultimodalDataset(val_file, image_dir, processor, MAX_LENGTH)
 
-train_dataloader = DataLoader(train, BATCH_SIZE)
+train_dataloader = DataLoader(train, BATCH_SIZE, shuffle=True)
 print(f'Loaded Traininig File: {train_file}.')
-val_dataloader = DataLoader(val, BATCH_SIZE)
+val_dataloader = DataLoader(val, BATCH_SIZE, shuffle=False)
 print(f'Loaded Validation File: {val_file}.')
 print('Data loaded.')
 
@@ -223,7 +223,7 @@ for epoch in range(1, EPOCHS):
         else:
             count += 1
 
-        if count == 5:
+        if count == 15:
             print(f'Stopping at epoch: {epoch}')
             break
     print()
