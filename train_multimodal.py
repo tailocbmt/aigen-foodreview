@@ -173,10 +173,12 @@ for epoch in range(1, EPOCHS):
 
             label_val_tensor = torch.tensor(
                 batchv['label'], dtype=torch.float64).to(device)
+
+            output_val = model(inputs_val).squeeze(1).to(torch.float64)
+
             loss_val = criterion(output_val, label_val_tensor)
             val_loss += loss_val.item()
 
-            output_val = model(inputs_val).squeeze(1).to(torch.float64)
             predictions = torch.sigmoid(output_val)
             predictions = torch.where(
                 predictions > 0.5, 1, 0).detach().cpu().numpy().tolist()
