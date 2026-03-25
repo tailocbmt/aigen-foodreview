@@ -1,4 +1,9 @@
+from pathlib import Path
+from typing import Dict, Optional
+
+import torch
 from torch.utils.data import Dataset
+from datasets import load_dataset
 import pandas as pd
 import os
 from PIL import Image
@@ -84,6 +89,48 @@ class MultimodalDataset(Dataset):
             pass
         image = Image.open(image_path).convert('RGB')
         inputs = self.tokenize(text=[text], images=[image])
+        return {'inputs': inputs, 'label': label}
+
+    def tokenize(self, text: list, images: list):
+        inputs = self.processor(text=text, images=images, return_tensors="pt",
+                                max_length=self.max_length, truncation=True, padding="max_length")
+        return inputs
+
+
+class HintsOfTruthMultimodalDataset(Dataset):
+    def __init__(self, file, image_dir, split, processor, max_length):
+        super().__init__()
+        self.file = file
+        self.real_data = load_dataset("michiel/hints_of_truth", split=split)
+
+        self.fake_data = pd.read_csv(file)
+        self.image_dir = image_dir
+        self.processor = processor
+        self.max_length = max_length
+
+        self.real_len = len(self.real_data)
+        self.fake_len = len(
+            self.fake_data) if self.fake_data is not None else 0
+        self.total_len = self.real_len + self.fake_len
+
+    def __len__(self):
+        return self.total_len
+
+    def __getitem__(self, index):
+        if index < self.real_len:
+            row = self.real_data[index]
+            text = str(row["text"])
+            image = row["image"]
+            label = 1
+        else:
+            row = self.fake_data.iloc[index - self.real_len]
+            text = str(row["llava_caption"])
+            image_path = os.path.join(self.image_dir, row["saved_image_path"])
+            image = Image.open(image_path).convert('RGB')
+            label = 0
+
+        inputs = self.tokenize(text=[text], images=[image])
+
         return {'inputs': inputs, 'label': label}
 
     def tokenize(self, text: list, images: list):
