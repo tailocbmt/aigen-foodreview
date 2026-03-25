@@ -11,5 +11,9 @@
   "EPOCHS": 100,
   "BATCH_SIZE": 32,
   "LR": 0.0001,
-  "EARLY_STOP": 5
+  "EARLY_STOP": 5,
+  "use_wandb": true,
+  "wandb_project": "Multimodal synthesis data detection",
+  "wandb_mode": "online",
+  "api_key": "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"
 }

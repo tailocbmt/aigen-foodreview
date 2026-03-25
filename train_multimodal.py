@@ -48,6 +48,8 @@ wandb_project = config.get(
     'wandb_project', 'Multimodal synthesis data detection')
 wandb_run_name = config.get('wandb_run_name', f'{model_name}-{dataset}')
 wandb_mode = config.get('wandb_mode', 'online')  # online, offline, disabled
+if config.get("api_key"):
+    os.environ["WANDB_API_KEY"] = config["api_key"]
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 available_models = ['clip', 'flava']
