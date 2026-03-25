@@ -187,7 +187,6 @@ for epoch in range(1, EPOCHS):
             labels_val.extend(label_val)
             # break
 
-        acc = accuracy_score(pred_val, labels_val)
         avg_val_loss = val_loss / len(val_dataloader)
         acc = accuracy_score(pred_val, labels_val)
 

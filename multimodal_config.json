@@ -1,7 +1,7 @@
 {
   "model_name": "clip",
   "MAX_LENGTH": 77,
-  "dataset": "hints_of_truth",
+  "dataset": "food_review",
   "train_file": "./data/dev1.csv",
   "val_file": "./data/dev2.csv",
   "test_file": "./data/test.csv",
