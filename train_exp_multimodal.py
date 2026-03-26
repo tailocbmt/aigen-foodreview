@@ -17,7 +17,7 @@ except ImportError:
 
 # CONFIG
 # Define the path to your config file
-config_path = 'configs/multimodal_config.json'
+config_path = 'configs/multimodal_larimar_config.json'
 
 # Open and read the JSON file
 with open(config_path, 'r') as file:
@@ -91,11 +91,11 @@ if model_name not in available_models:
 if model_name == 'clip':
     backbone = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
     processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch16')
-    model = CLIPDetector(backbone, processor)
+    model = CLIPDetectorWMemory(backbone, processor)
 elif model_name == 'flava':
     backbone = FlavaModel.from_pretrained("facebook/flava-full")
     processor = FlavaProcessor.from_pretrained("facebook/flava-full")
-    model = FLAVADetector(backbone, processor)
+    model = FLAVADetectorWMemory(backbone, processor)
 else:
     pass
 model = model.to(device)
