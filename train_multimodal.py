@@ -232,7 +232,7 @@ for epoch in range(1, EPOCHS):
         else:
             count += 1
 
-        if count == 15:
+        if count == 10:
             print(f'Stopping at epoch: {epoch}')
             break
     print()
