@@ -120,7 +120,7 @@ class HintsOfTruthMultimodalDataset(Dataset):
         if index < self.real_len:
             row = self.real_data[index]
             text = str(row["text"])
-            image = row["image"]
+            image = row["image"].convert('RGB')
             label = 1
         else:
             row = self.fake_data.iloc[index - self.real_len]
