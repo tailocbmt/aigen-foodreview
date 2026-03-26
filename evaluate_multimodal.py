@@ -4,7 +4,7 @@ import json
 from transformers import CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader
-from dataset import MultimodalDataset
+from dataset import HintsOfTruthMultimodalDataset, MultimodalDataset
 from models import CLIPDetector, FLAVADetector
 
 # CONFIG
@@ -20,6 +20,7 @@ with open(config_path, 'r') as file:
 # Options for model_name: 'clip', 'flava'
 model_name = config.get('model_name', 'flava')
 # Note: for 'clip', max length should be 77
+dataset = config.get('dataset', 'food_review')
 MAX_LENGTH = config.get('MAX_LENGTH', 512)
 test_file = config.get('test_file', '')
 output_dir = config.get('output_dir', '')
@@ -57,7 +58,12 @@ model = model.to(device)
 print(f'Model {model_name} loaded at weights: {weights}.')
 
 # DATA
-test = MultimodalDataset(test_file, image_dir, processor, MAX_LENGTH)
+if dataset == "hints_of_truth":
+    test = HintsOfTruthMultimodalDataset(
+        test_file, image_dir, "dev2", processor, MAX_LENGTH)
+else:
+    test = MultimodalDataset(test_file, image_dir, processor, MAX_LENGTH)
+
 test_dataloader = DataLoader(test, BATCH_SIZE)
 print(f'Loaded Testing File: {test_file}.')
 

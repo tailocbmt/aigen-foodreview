@@ -4,7 +4,7 @@ import torch
 import os
 import logging
 from torch.optim import AdamW
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from torch.utils.data import DataLoader
 from dataset import MultimodalDataset, HintsOfTruthMultimodalDataset
 from models import CLIPDetector, FLAVADetector
@@ -189,12 +189,18 @@ for epoch in range(1, EPOCHS):
 
         avg_val_loss = val_loss / len(val_dataloader)
         acc = accuracy_score(pred_val, labels_val)
+        prec = precision_score(pred_val, labels_val)
+        rec = recall_score(pred_val, labels_val)
+        f1 = f1_score(pred_val, labels_val)
 
         logging.info(
             f'Epoch: {epoch}, Accuracy: {acc}, LR: {LR}, Batch Size: {BATCH_SIZE}.')
         print(f'# Train Loss: {avg_train_loss}')
         print(f'# Val Loss: {avg_val_loss}')
         print(f'# Accuracy: {acc}')
+        print(f'# Precision: {prec}')
+        print(f'# Recall: {rec}')
+        print(f'# F1-score: {f1}')
 
         if use_wandb and WANDB_AVAILABLE:
             wandb.log({
@@ -202,6 +208,9 @@ for epoch in range(1, EPOCHS):
                 "train/loss": avg_train_loss,
                 "val/loss": avg_val_loss,
                 "val/accuracy": acc,
+                "val/precision": prec,
+                "val/recall": rec,
+                "val/f1_score": f1,
                 "lr": optimiser.param_groups[0]['lr']
             })
 
