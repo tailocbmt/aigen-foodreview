@@ -7,7 +7,7 @@ from torch.optim import AdamW
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from torch.utils.data import DataLoader
 from dataset import MultimodalDataset, HintsOfTruthMultimodalDataset
-from larimar_base.base_models import CLIPDetector, FLAVADetector
+from larimar_base.base_models import CLIPDetectorWMemory, FLAVADetectorWMemory
 import torch.nn as nn
 try:
     import wandb
@@ -46,7 +46,7 @@ EARLY_STOP = config.get('EARLY_STOP', 5)
 use_wandb = config.get('use_wandb', True)
 wandb_project = config.get(
     'wandb_project', 'Multimodal synthesis data detection')
-wandb_run_name = config.get('wandb_run_name', f'{model_name}-{dataset}')
+wandb_run_name = config.get('wandb_run_name', f'{model_name}-{dataset}-epo')
 wandb_mode = config.get('wandb_mode', 'online')  # online, offline, disabled
 if config.get("api_key"):
     os.environ["WANDB_API_KEY"] = config["api_key"]
@@ -132,6 +132,10 @@ criterion = nn.BCEWithLogitsLoss()
 print('Training..')
 count = 0
 for epoch in range(1, EPOCHS):
+    # Reset memory or it will hold old batch forever
+    if hasattr(model, "episodic_memory") and model.episodic_memory is not None:
+        model.episodic_memory.reset_memory()
+
     model.train()
     pred_val = []
     labels_val = []
@@ -232,7 +236,7 @@ for epoch in range(1, EPOCHS):
         else:
             count += 1
 
-        if count == 15:
+        if count == 10:
             print(f'Stopping at epoch: {epoch}')
             break
     print()
