@@ -5,12 +5,12 @@ from transformers import CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader
 from dataset import HintsOfTruthMultimodalDataset, MultimodalDataset
-from larimar_base.base_models import CLIPDetector, FLAVADetector
+from larimar_base.base_models import CLIPDetectorWMemory, FLAVADetectorWMemory
 
 # CONFIG
 
 # Define the path to your config file
-config_path = 'configs/multimodal_config.json'
+config_path = 'configs/multimodal_larimar_config.json'
 
 # Open and read the JSON file
 with open(config_path, 'r') as file:
@@ -44,12 +44,12 @@ weights_dir = os.path.join(output_dir, weights)
 if model_name == 'clip':
     backbone = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
     processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch16')
-    model = CLIPDetector(backbone, processor)
+    model = CLIPDetectorWMemory(backbone, processor)
     model.load_state_dict(torch.load(weights_dir))
 elif model_name == 'flava':
     backbone = FlavaModel.from_pretrained("facebook/flava-full")
     processor = FlavaProcessor.from_pretrained("facebook/flava-full")
-    model = FLAVADetector(backbone, processor)
+    model = FLAVADetectorWMemory(backbone, processor)
     model.load_state_dict(torch.load(weights_dir))
 else:
     pass
@@ -70,7 +70,11 @@ print(f'Loaded Testing File: {test_file}.')
 pred_val = []
 labels_val = []
 
+if hasattr(model, "episodic_memory") and model.episodic_memory is not None:
+    model.episodic_memory.reset_memory()
+
 model.eval()
+model.memory_mode = "read"   # or "off"
 with torch.no_grad():
     print('Validating..')
     for j, batchv in enumerate(test_dataloader):

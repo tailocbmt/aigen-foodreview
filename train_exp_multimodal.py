@@ -132,11 +132,13 @@ criterion = nn.BCEWithLogitsLoss()
 print('Training..')
 count = 0
 for epoch in range(1, EPOCHS):
-    # Reset memory or it will hold old batch forever
+    # reset before training
     if hasattr(model, "episodic_memory") and model.episodic_memory is not None:
         model.episodic_memory.reset_memory()
 
     model.train()
+    model.memory_mode = "read_write"   # if you still use that design
+
     pred_val = []
     labels_val = []
     train_loss = 0.0
@@ -164,9 +166,14 @@ for epoch in range(1, EPOCHS):
 
     avg_train_loss = train_loss / len(train_dataloader)
 
-    val_loss = 0.0
+    # reset again before validation
+    if hasattr(model, "episodic_memory") and model.episodic_memory is not None:
+        model.episodic_memory.reset_memory()
 
+    val_loss = 0.0
     model.eval()
+    model.memory_mode = "read"   # or "off"
+
     with torch.no_grad():
         print('Validating..')
         for j, batchv in enumerate(val_dataloader):
@@ -239,7 +246,6 @@ for epoch in range(1, EPOCHS):
         if count == 10:
             print(f'Stopping at epoch: {epoch}')
             break
-    print()
     # break
 
 if use_wandb and WANDB_AVAILABLE:

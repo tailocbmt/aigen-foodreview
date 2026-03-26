@@ -235,7 +235,6 @@ for epoch in range(1, EPOCHS):
         if count == 10:
             print(f'Stopping at epoch: {epoch}')
             break
-    print()
     # break
 
 if use_wandb and WANDB_AVAILABLE:
