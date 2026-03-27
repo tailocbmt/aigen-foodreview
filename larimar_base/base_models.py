@@ -211,7 +211,7 @@ class CLIPDetectorWMemory(MemoryAugmentedDetector):
         fusion_type="concat"
     ):
         super().__init__(
-            feature_dim=1024,
+            feature_dim=2048,  # 1024
             out_dim=out_dim,
             use_memory=use_memory,
             memory_size=memory_size,
