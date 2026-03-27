@@ -44,6 +44,10 @@ BATCH_SIZE = config.get('BATCH_SIZE', 16)
 LR = config.get('LR', 0.0001)
 EARLY_STOP = config.get('EARLY_STOP', 10)
 
+# LR decay config
+LR_STEP_SIZE = config.get('LR_STEP_SIZE', 5)   # decay every 5 epochs
+LR_GAMMA = config.get('LR_GAMMA', 0.5)         # multiply lr by 0.5
+
 # wandb config
 use_wandb = config.get('use_wandb', True)
 wandb_project = config.get(
