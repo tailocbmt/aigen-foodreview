@@ -156,8 +156,6 @@ for epoch in range(1, EPOCHS):
         labels = batch['label'].to(
             device=device, dtype=torch.float32).view(-1, 1)
 
-        labels = labels.to(device)
-
         # return raw features so we can write to memory AFTER optimizer step
         output, features = model(inputs, return_features=True)
         output = output.float()   # [B, 1]
