@@ -192,6 +192,11 @@ class MemoryAugmentedDetector(nn.Module):
     def forward(self, inputs, return_attention: bool = False):
         x = self.feature_extractor(inputs)
         x, attention_weights = self.apply_memory(x)
+
+        retrieved, attn = self.episodic_memory.read_memory(x)
+        gate = torch.sigmoid(self.gate_net(torch.cat([x, retrieved], dim=1)))
+        x = gate * retrieved + (1 - gate) * x
+
         logits = self.classifier(x)
 
         if return_attention:
