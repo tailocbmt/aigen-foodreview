@@ -4,6 +4,7 @@ import torch
 import os
 import logging
 from torch.optim import AdamW
+from torch.optim.lr_scheduler import StepLR
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from torch.utils.data import DataLoader
 from modules.dataset import MultimodalDataset, HintsOfTruthMultimodalDataset
@@ -41,7 +42,7 @@ image_dir = config.get('image_dir', '')
 EPOCHS = config.get('EPOCHS', 100)
 BATCH_SIZE = config.get('BATCH_SIZE', 16)
 LR = config.get('LR', 0.0001)
-EARLY_STOP = config.get('EARLY_STOP', 5)
+EARLY_STOP = config.get('EARLY_STOP', 10)
 
 # wandb config
 use_wandb = config.get('use_wandb', True)
@@ -113,6 +114,7 @@ print('Log file initialized.')
 
 # OPTIMIZER
 optimiser = AdamW(model.parameters(), lr=LR)
+scheduler = StepLR(optimiser, step_size=LR_STEP_SIZE, gamma=LR_GAMMA)
 criterion = nn.BCEWithLogitsLoss()
 
 # OPTIMIZATION
@@ -234,6 +236,8 @@ for epoch in range(1, EPOCHS):
             print(f'Stopping at epoch: {epoch}')
             break
     # break
+    # step lr decay after each epoch
+    scheduler.step()
 
 if use_wandb and WANDB_AVAILABLE:
     wandb.finish()

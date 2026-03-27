@@ -224,7 +224,12 @@ class CLIPDetectorWMemory(MemoryAugmentedDetector):
     def feature_extractor(self, inputs):
         outputs = self.backbone(**inputs)
         image_embeds, text_embeds = outputs.image_embeds, outputs.text_embeds
-        fused = torch.cat([image_embeds, text_embeds], dim=1)
+        # fused = torch.cat([image_embeds, text_embeds], dim=1)
+
+        diff = torch.abs(image_embeds - text_embeds)
+        prod = image_embeds * text_embeds
+        fused = torch.cat([image_embeds, text_embeds, diff, prod], dim=1)
+
         return fused
 
 
@@ -252,6 +257,21 @@ class FLAVADetectorWMemory(MemoryAugmentedDetector):
 
     def feature_extractor(self, inputs):
         outputs = self.backbone(**inputs)
-        embeddings = outputs.multimodal_embeddings
-        cls_embedding = embeddings[:, 0, :]
-        return cls_embedding
+
+        # embeddings = outputs.multimodal_embeddings
+        # cls_embedding = embeddings[:, 0, :]
+
+        # unimodal branches
+        text_embeddings = outputs.text_embeddings      # [B, T_text, 768]
+        image_embeddings = outputs.image_embeddings    # [B, T_img, 768]
+
+        # usually first token is CLS
+        text_cls = text_embeddings[:, 0, :]            # [B, 768]
+        image_cls = image_embeddings[:, 0, :]          # [B, 768]
+
+        diff = torch.abs(image_cls - text_cls)
+        prod = image_cls * text_cls
+
+        fused = torch.cat([image_cls, text_cls, diff, prod], dim=1)
+
+        return fused

@@ -40,7 +40,7 @@ image_dir = config.get('image_dir', '')
 EPOCHS = config.get('EPOCHS', 100)
 BATCH_SIZE = config.get('BATCH_SIZE', 16)
 LR = config.get('LR', 0.0001)
-EARLY_STOP = config.get('EARLY_STOP', 5)
+EARLY_STOP = config.get('EARLY_STOP', 10)
 
 # wandb config
 use_wandb = config.get('use_wandb', True)
