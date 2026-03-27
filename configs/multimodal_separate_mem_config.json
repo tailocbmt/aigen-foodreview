@@ -7,7 +7,7 @@
   "val_file": "./data/dev2.csv",
   "test_file": "./data/test.csv",
   "logging_file": "train",
-  "output_dir": "logging_larimar",
+  "output_dir": "logging_larimar_separate_mem",
   "image_dir": "./generated_fake_images",
   "EPOCHS": 100,
   "BATCH_SIZE": 32,
