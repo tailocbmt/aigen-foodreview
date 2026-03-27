@@ -4,13 +4,13 @@ import json
 from transformers import CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader
-from dataset import HintsOfTruthMultimodalDataset, MultimodalDataset
+from modules.dataset import HintsOfTruthMultimodalDataset, MultimodalDataset
 from larimar_base.base_models import CLIPDetectorWMemory, FLAVADetectorWMemory
 
 # CONFIG
 
 # Define the path to your config file
-config_path = 'configs/multimodal_larimar_config.json'
+config_path = 'configs/multimodal_mem_config.json'
 
 # Open and read the JSON file
 with open(config_path, 'r') as file:

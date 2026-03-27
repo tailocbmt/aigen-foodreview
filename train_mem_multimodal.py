@@ -7,7 +7,8 @@ from torch.optim import AdamW
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from torch.utils.data import DataLoader
 from modules.dataset import MultimodalDataset, HintsOfTruthMultimodalDataset
-from larimar_base.base_models import CLIPDetector, FLAVADetector
+from larimar_base.base_models import CLIPDetectorWMemory, FLAVADetectorWMemory
+from larimar_base.exp_models import CLIPDetectorSeparateMemory
 import torch.nn as nn
 try:
     import wandb
@@ -17,7 +18,7 @@ except ImportError:
 
 # CONFIG
 # Define the path to your config file
-config_path = 'configs/multimodal_config.json'
+config_path = 'configs/multimodal_mem_config.json'
 
 # Open and read the JSON file
 with open(config_path, 'r') as file:
@@ -46,7 +47,7 @@ EARLY_STOP = config.get('EARLY_STOP', 5)
 use_wandb = config.get('use_wandb', True)
 wandb_project = config.get(
     'wandb_project', 'Multimodal synthesis data detection')
-wandb_run_name = config.get('wandb_run_name', f'{model_name}-{dataset}')
+wandb_run_name = config.get('wandb_run_name', f'{model_name}-{dataset}-epo')
 wandb_mode = config.get('wandb_mode', 'online')  # online, offline, disabled
 if config.get("api_key"):
     os.environ["WANDB_API_KEY"] = config["api_key"]
@@ -77,11 +78,11 @@ if model_name not in available_models:
 if model_name == 'clip':
     backbone = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
     processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch16')
-    model = CLIPDetector(backbone, processor)
+    model = CLIPDetectorWMemory(backbone, processor)
 elif model_name == 'flava':
     backbone = FlavaModel.from_pretrained("facebook/flava-full")
     processor = FlavaProcessor.from_pretrained("facebook/flava-full")
-    model = FLAVADetector(backbone, processor)
+    model = FLAVADetectorWMemory(backbone, processor)
 else:
     pass
 model = model.to(device)
@@ -118,7 +119,13 @@ criterion = nn.BCEWithLogitsLoss()
 print('Training..')
 count = 0
 for epoch in range(1, EPOCHS):
+    # reset before training
+    if hasattr(model, "episodic_memory") and model.episodic_memory is not None:
+        model.episodic_memory.reset_memory()
+
     model.train()
+    model.memory_mode = "read_write"   # if you still use that design
+
     pred_val = []
     labels_val = []
     train_loss = 0.0
@@ -146,9 +153,14 @@ for epoch in range(1, EPOCHS):
 
     avg_train_loss = train_loss / len(train_dataloader)
 
-    val_loss = 0.0
+    # reset again before validation
+    if hasattr(model, "episodic_memory") and model.episodic_memory is not None:
+        model.episodic_memory.reset_memory()
 
+    val_loss = 0.0
     model.eval()
+    model.memory_mode = "read"   # or "off"
+
     with torch.no_grad():
         print('Validating..')
         for j, batchv in enumerate(val_dataloader):

@@ -91,6 +91,12 @@ class EpisodicMemory(nn.Module):
         return episode
 
     def read_memory(self, query: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        query: [B, D]
+        returns:
+            retrieved: [B, D]
+            attention_weights: [B, M]
+        """
         q = self.query_net(query)         # [B, E]
         k = self.key_net(self.memory)     # [M, E]
         v = self.value_net(self.memory)   # [M, E]

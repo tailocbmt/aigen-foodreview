@@ -6,8 +6,8 @@ import logging
 from torch.optim import AdamW
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from torch.utils.data import DataLoader
-from dataset import MultimodalDataset, HintsOfTruthMultimodalDataset
-from larimar_base.base_models import CLIPDetectorWMemory, FLAVADetectorWMemory
+from modules.dataset import MultimodalDataset, HintsOfTruthMultimodalDataset
+from larimar_base.exp_models import CLIPDetectorSeparateMemory
 import torch.nn as nn
 try:
     import wandb
@@ -29,6 +29,7 @@ with open(config_path, 'r') as file:
 model_name = config.get('model_name', 'flava')
 # Note: for 'clip', max length should be 77
 MAX_LENGTH = config.get('MAX_LENGTH', 512)
+fusion_type = config.get('fusion_type', 'concat')
 # File paths
 dataset = config.get('dataset', 'food_review')
 train_file = config.get('train_file', '')
@@ -64,21 +65,7 @@ if use_wandb and WANDB_AVAILABLE:
         project=wandb_project,
         name=wandb_run_name,
         mode=wandb_mode,
-        config={
-            "model_name": model_name,
-            "dataset": dataset,
-            "MAX_LENGTH": MAX_LENGTH,
-            "train_file": train_file,
-            "val_file": val_file,
-            "logging_file": logging_file,
-            "output_dir": output_dir,
-            "image_dir": image_dir,
-            "EPOCHS": EPOCHS,
-            "BATCH_SIZE": BATCH_SIZE,
-            "LR": LR,
-            "EARLY_STOP": EARLY_STOP,
-            "device": device
-        }
+        config=config
     )
     print('wandb initialized.')
 elif use_wandb and not WANDB_AVAILABLE:
@@ -91,11 +78,20 @@ if model_name not in available_models:
 if model_name == 'clip':
     backbone = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
     processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch16')
-    model = CLIPDetectorWMemory(backbone, processor)
-elif model_name == 'flava':
-    backbone = FlavaModel.from_pretrained("facebook/flava-full")
-    processor = FlavaProcessor.from_pretrained("facebook/flava-full")
-    model = FLAVADetectorWMemory(backbone, processor)
+    model = model = CLIPDetectorSeparateMemory(
+        backbone=backbone,
+        processor=processor,
+        embed_dim=512,
+        out_dim=1,
+        use_memory=True,
+        memory_size=512,
+        memory_mode="read",
+        fusion_type=fusion_type,   # or "gated_add"
+    )
+# elif model_name == 'flava':
+#     backbone = FlavaModel.from_pretrained("facebook/flava-full")
+#     processor = FlavaProcessor.from_pretrained("facebook/flava-full")
+#     model = FLAVADetectorWMemory(backbone, processor)
 else:
     pass
 model = model.to(device)
@@ -133,11 +129,11 @@ print('Training..')
 count = 0
 for epoch in range(1, EPOCHS):
     # reset before training
-    if hasattr(model, "episodic_memory") and model.episodic_memory is not None:
-        model.episodic_memory.reset_memory()
+    if hasattr(model, "reset_memory"):
+        model.reset_memory()
 
     model.train()
-    model.memory_mode = "read_write"   # if you still use that design
+    model.memory_mode = "read"
 
     pred_val = []
     labels_val = []
@@ -155,11 +151,21 @@ for epoch in range(1, EPOCHS):
         labels = torch.tensor(batch['label'], dtype=torch.float64)
         labels = labels.to(device)
 
-        output = model(inputs).squeeze(1).to(torch.float64)
+        # return raw features so we can write to memory AFTER optimizer step
+        output, features = model(inputs, return_features=True)
+        output = output.float()   # [B, 1]
 
         loss = criterion(output, labels)
         loss.backward()
         optimiser.step()
+
+        # write memory only after backward + optimizer step
+        if hasattr(model, "write_memory"):
+            with torch.no_grad():
+                model.write_memory(
+                    text_embeds=features["text_embeds"],
+                    image_embeds=features["image_embeds"],
+                )
 
         train_loss += loss.item()
         # break
@@ -167,8 +173,8 @@ for epoch in range(1, EPOCHS):
     avg_train_loss = train_loss / len(train_dataloader)
 
     # reset again before validation
-    if hasattr(model, "episodic_memory") and model.episodic_memory is not None:
-        model.episodic_memory.reset_memory()
+    if hasattr(model, "reset_memory"):
+        model.reset_memory()
 
     val_loss = 0.0
     model.eval()
@@ -185,7 +191,7 @@ for epoch in range(1, EPOCHS):
             label_val_tensor = torch.tensor(
                 batchv['label'], dtype=torch.float64).to(device)
 
-            output_val = model(inputs_val).squeeze(1).to(torch.float64)
+            output_val = model(inputs_val).float()   # [B, 1]
 
             loss_val = criterion(output_val, label_val_tensor)
             val_loss += loss_val.item()

@@ -1,12 +1,13 @@
 from transformers import AutoTokenizer, BertForSequenceClassification
 from transformers import GPTNeoForSequenceClassification
-import torch, os
+import torch
+import os
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader
-from dataset import TextDataset
+from modules.dataset import TextDataset
 
 # CONFIG
-model_name = 'gpt' # bert, gpt 
+model_name = 'gpt'  # bert, gpt
 test_file = ""
 BATCH_SIZE = 16
 MAX_LENGTH = 512
@@ -14,15 +15,15 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 available_models = ['bert', 'gpt']
 output_dir = f""
 
-### MODEL SELECTION 
+# MODEL SELECTION
 if model_name not in available_models:
     raise ValueError(f'{model_name} not in {available_models}.')
 
-# WEIGHTS 
+# WEIGHTS
 weights = sorted(os.listdir(output_dir))[-1]
 weights_dir = os.path.join(output_dir, weights)
 
-### MODEL SELECTION 
+# MODEL SELECTION
 if model_name not in available_models:
     raise ValueError(f'{model_name} not in {available_models}.')
 
@@ -39,7 +40,7 @@ else:
 model = model.to(device)
 print(f'Model {model_name} at weights {weights} loaded.')
 
-# DATA 
+# DATA
 test = TextDataset(test_file, tokenizer, MAX_LENGTH)
 test_dataloader = DataLoader(test, BATCH_SIZE)
 print('Data loaded.')
@@ -56,12 +57,14 @@ with torch.no_grad():
         attention_mask_val = inputs_val['attention_mask'].squeeze(1)
         label_val = batchv['label'].numpy().tolist()
 
-        output_val = model(input_ids=input_ids_val, attention_mask=attention_mask_val)
-        output_val = torch.softmax(output_val.logits, dim = -1)
-        predictions = torch.argmax(output_val, dim = -1).detach().cpu().numpy().tolist()
+        output_val = model(input_ids=input_ids_val,
+                           attention_mask=attention_mask_val)
+        output_val = torch.softmax(output_val.logits, dim=-1)
+        predictions = torch.argmax(
+            output_val, dim=-1).detach().cpu().numpy().tolist()
         pred_val.extend(predictions)
         labels_val.extend(label_val)
-    
+
     acc = accuracy_score(pred_val, labels_val)
     prec = precision_score(pred_val, labels_val)
     rec = recall_score(pred_val, labels_val)
