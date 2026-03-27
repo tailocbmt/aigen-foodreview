@@ -145,8 +145,7 @@ for epoch in range(1, EPOCHS):
         inputs, labels = batch['inputs'], batch['label']
         inputs = {key: tensor.squeeze(1).to(device)
                   for key, tensor in inputs.items()}
-        labels = batch['label'].to(
-            device=device, dtype=torch.float32).view(-1, 1)
+        labels = torch.tensor(batch['label'], dtype=torch.float64)
 
         output = model(inputs).squeeze(1).to(torch.float64)
 
