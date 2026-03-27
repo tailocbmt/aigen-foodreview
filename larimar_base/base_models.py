@@ -151,39 +151,15 @@ class MemoryAugmentedDetector(nn.Module):
         else:
             self.episodic_memory = None
 
-        if fusion_type == "concat":
-            classifier_in_dim = feature_dim * 2
-            self.gate_net = None
-
-        elif fusion_type == "add":
-            classifier_in_dim = feature_dim
-            self.gate_net = None
-
-        elif fusion_type == "gated_add":
-            classifier_in_dim = feature_dim
-            self.gate_net = nn.Sequential(
-                nn.Linear(feature_dim * 2, feature_dim),
-                nn.ReLU(),
-                nn.Dropout(0.1),
-                nn.Linear(feature_dim, feature_dim),
-                nn.Sigmoid()
-            )
-        else:
-            raise ValueError(f"Unsupported fusion_type: {fusion_type}")
-
+        classifier_in_dim = feature_dim * \
+            2 if (use_memory and fusion_type == "concat") else feature_dim
         self.classifier = nn.Linear(classifier_in_dim, out_dim)
 
     def fuse_with_memory(self, x: torch.Tensor, retrieved: torch.Tensor) -> torch.Tensor:
         if self.fusion_type == "concat":
             return torch.cat([x, retrieved], dim=1)
-
         elif self.fusion_type == "add":
             return x + retrieved
-
-        elif self.fusion_type == "gated_add":
-            gate_input = torch.cat([x, retrieved], dim=1)   # [B, 2D]
-            gate = self.gate_net(gate_input)                # [B, D]
-            return gate * retrieved + (1.0 - gate) * x
         else:
             raise ValueError(f"Unsupported fusion_type: {self.fusion_type}")
 
@@ -213,27 +189,14 @@ class MemoryAugmentedDetector(nn.Module):
     def feature_extractor(self, inputs):
         raise NotImplementedError
 
-    def forward(
-        self,
-        inputs,
-        return_attention: bool = False,
-        return_features: bool = False
-    ):
-        raw_x = self.feature_extractor(inputs)   # [B, D]
-        x, attention_weights = self.apply_memory(raw_x)
+    def forward(self, inputs, return_attention: bool = False):
+        x = self.feature_extractor(inputs)
+        x, attention_weights = self.apply_memory(x)
         logits = self.classifier(x)
 
-        outputs = [logits]
-
         if return_attention:
-            outputs.append(attention_weights)
-
-        if return_features:
-            outputs.append(raw_x.detach())   # write this to memory later
-
-        if len(outputs) == 1:
-            return outputs[0]
-        return tuple(outputs)
+            return logits, attention_weights
+        return logits
 
 
 class CLIPDetectorWMemory(MemoryAugmentedDetector):
@@ -245,10 +208,10 @@ class CLIPDetectorWMemory(MemoryAugmentedDetector):
         use_memory=True,
         memory_size=512,
         memory_mode="read_write",
-        fusion_type="concat"
+        fusion_type="add"
     ):
         super().__init__(
-            feature_dim=1024,  # 1024
+            feature_dim=1024,
             out_dim=out_dim,
             use_memory=use_memory,
             memory_size=memory_size,
@@ -260,11 +223,10 @@ class CLIPDetectorWMemory(MemoryAugmentedDetector):
 
     def feature_extractor(self, inputs):
         outputs = self.backbone(**inputs)
-        image_embeds = outputs.image_embeds
-        text_embeds = outputs.text_embeds
-        x = torch.cat([image_embeds, text_embeds], dim=1)
+        image_embeds, text_embeds = outputs.image_embeds, outputs.text_embeds
+        fused = torch.cat([image_embeds, text_embeds], dim=1)
 
-        return x
+        return fused
 
 
 class FLAVADetectorWMemory(MemoryAugmentedDetector):
@@ -291,21 +253,6 @@ class FLAVADetectorWMemory(MemoryAugmentedDetector):
 
     def feature_extractor(self, inputs):
         outputs = self.backbone(**inputs)
-
-        # embeddings = outputs.multimodal_embeddings
-        # cls_embedding = embeddings[:, 0, :]
-
-        # unimodal branches
-        text_embeddings = outputs.text_embeddings      # [B, T_text, 768]
-        image_embeddings = outputs.image_embeddings    # [B, T_img, 768]
-
-        # usually first token is CLS
-        text_cls = text_embeddings[:, 0, :]            # [B, 768]
-        image_cls = image_embeddings[:, 0, :]          # [B, 768]
-
-        diff = torch.abs(image_cls - text_cls)
-        prod = image_cls * text_cls
-
-        fused = torch.cat([image_cls, text_cls, diff, prod], dim=1)
-
-        return fused
+        embeddings = outputs.multimodal_embeddings
+        cls_embedding = embeddings[:, 0, :]
+        return cls_embedding
