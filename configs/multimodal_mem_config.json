@@ -1,7 +1,6 @@
 {
   "model_name": "clip",
   "MAX_LENGTH": 77,
-  "memory_size": 2048,
   "dataset": "hints_of_truth",
   "train_file": "./data/dev1.csv",
   "val_file": "./data/dev2.csv",

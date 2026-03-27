@@ -216,7 +216,7 @@ class CLIPDetectorWMemory(MemoryAugmentedDetector):
         fusion_type="concat"
     ):
         super().__init__(
-            feature_dim=2048,  # 1024
+            feature_dim=1024,  # 1024
             out_dim=out_dim,
             use_memory=use_memory,
             memory_size=memory_size,
@@ -229,11 +229,7 @@ class CLIPDetectorWMemory(MemoryAugmentedDetector):
     def feature_extractor(self, inputs):
         outputs = self.backbone(**inputs)
         image_embeds, text_embeds = outputs.image_embeds, outputs.text_embeds
-        # fused = torch.cat([image_embeds, text_embeds], dim=1)
-
-        diff = torch.abs(image_embeds - text_embeds)
-        prod = image_embeds * text_embeds
-        fused = torch.cat([image_embeds, text_embeds, diff, prod], dim=1)
+        fused = torch.cat([image_embeds, text_embeds], dim=1)
 
         return fused
 
