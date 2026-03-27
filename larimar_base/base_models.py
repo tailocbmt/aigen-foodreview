@@ -151,6 +151,13 @@ class MemoryAugmentedDetector(nn.Module):
         else:
             self.episodic_memory = None
 
+        self.gate_net = nn.Sequential(
+            nn.Linear(self.feature_dim * 2, self.feature_dim),  # 4096 -> 2048
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(self.feature_dim, self.feature_dim),      # 2048 -> 2048
+            nn.Sigmoid()
+        )
         classifier_in_dim = feature_dim * \
             2 if (use_memory and fusion_type == "concat") else feature_dim
         self.classifier = nn.Linear(classifier_in_dim, out_dim)
@@ -216,7 +223,7 @@ class CLIPDetectorWMemory(MemoryAugmentedDetector):
         fusion_type="concat"
     ):
         super().__init__(
-            feature_dim=1024,  # 1024
+            feature_dim=2048,  # 1024
             out_dim=out_dim,
             use_memory=use_memory,
             memory_size=memory_size,
