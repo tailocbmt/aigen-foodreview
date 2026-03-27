@@ -66,7 +66,7 @@ def get_llava_caption(llava_pipe, image_path, original_text):
             "role": "user",
             "content": [
                 {"type": "image", "image": image_path},
-                {"type": "text", "text": f"Please provide a human-like, realistic, and descriptive caption for what is actually shown in the image."},
+                {"type": "text", "text": f"Here is the original text that inspired this image: '{original_text}'. Please provide a human-like, realistic, concise, and descriptive caption for what is actually shown in the image."},
             ],
         },
     ]
