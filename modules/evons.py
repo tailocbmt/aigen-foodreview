@@ -7,7 +7,7 @@ from PIL import Image
 from tqdm import tqdm
 
 # --- Configuration ---
-OUTPUT_DIR = "generated_sd_fake_images"
+OUTPUT_DIR = "generated_evons"
 CSV_OUTPUT_NAME = "evons_generated_images.csv"
 IMAGE_MODEL_ID = "https://huggingface.co/city96/stable-diffusion-3.5-large-turbo-gguf/blob/main/sd3.5_large_turbo-Q8_0.gguf"
 OLLAMA_MODEL = "llava:7b"  # Added Llava model configuration
@@ -84,6 +84,10 @@ def main():
     )
 
     df = pd.read_csv(input_csv_path, encoding='utf-8', low_memory=False)
+
+    # Filter rows: keep only real samples with valid images
+    df = df[(df['is_fake'] == 0) & (
+        df['is_valid_image'] == 1)].reset_index(drop=True)
 
     saved_image_paths = []
 
