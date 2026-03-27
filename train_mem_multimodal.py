@@ -150,7 +150,7 @@ for epoch in range(1, EPOCHS):
 
         output, features = model(inputs, return_features=True)
 
-        loss = criterion(output, labels)
+        loss = criterion(output.squeeze(1).to(torch.float64), labels)
         loss.backward()
         optimiser.step()
 
