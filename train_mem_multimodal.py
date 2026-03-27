@@ -148,11 +148,14 @@ for epoch in range(1, EPOCHS):
         labels = torch.tensor(batch['label'], dtype=torch.float64)
         labels = labels.to(device)
 
-        output = model(inputs).squeeze(1).to(torch.float64)
+        output, features = model(inputs, return_features=True)
 
         loss = criterion(output, labels)
         loss.backward()
         optimiser.step()
+
+        with torch.no_grad():
+            model.episodic_memory.write_memory(features)
 
         train_loss += loss.item()
         # break

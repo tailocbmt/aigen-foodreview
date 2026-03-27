@@ -151,22 +151,39 @@ class MemoryAugmentedDetector(nn.Module):
         else:
             self.episodic_memory = None
 
-        self.gate_net = nn.Sequential(
-            nn.Linear(self.feature_dim * 2, self.feature_dim),  # 4096 -> 2048
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(self.feature_dim, self.feature_dim),      # 2048 -> 2048
-            nn.Sigmoid()
-        )
-        classifier_in_dim = feature_dim * \
-            2 if (use_memory and fusion_type == "concat") else feature_dim
+        if fusion_type == "concat":
+            classifier_in_dim = feature_dim * 2
+            self.gate_net = None
+
+        elif fusion_type == "add":
+            classifier_in_dim = feature_dim
+            self.gate_net = None
+
+        elif fusion_type == "gated_add":
+            classifier_in_dim = feature_dim
+            self.gate_net = nn.Sequential(
+                nn.Linear(feature_dim * 2, feature_dim),
+                nn.ReLU(),
+                nn.Dropout(0.1),
+                nn.Linear(feature_dim, feature_dim),
+                nn.Sigmoid()
+            )
+        else:
+            raise ValueError(f"Unsupported fusion_type: {fusion_type}")
+
         self.classifier = nn.Linear(classifier_in_dim, out_dim)
 
     def fuse_with_memory(self, x: torch.Tensor, retrieved: torch.Tensor) -> torch.Tensor:
         if self.fusion_type == "concat":
             return torch.cat([x, retrieved], dim=1)
+
         elif self.fusion_type == "add":
             return x + retrieved
+
+        elif self.fusion_type == "gated_add":
+            gate_input = torch.cat([x, retrieved], dim=1)   # [B, 2D]
+            gate = self.gate_net(gate_input)                # [B, D]
+            return gate * retrieved + (1.0 - gate) * x
         else:
             raise ValueError(f"Unsupported fusion_type: {self.fusion_type}")
 
@@ -196,19 +213,27 @@ class MemoryAugmentedDetector(nn.Module):
     def feature_extractor(self, inputs):
         raise NotImplementedError
 
-    def forward(self, inputs, return_attention: bool = False):
-        x = self.feature_extractor(inputs)
-        x, attention_weights = self.apply_memory(x)
-
-        retrieved, attn = self.episodic_memory.read_memory(x)
-        gate = torch.sigmoid(self.gate_net(torch.cat([x, retrieved], dim=1)))
-        x = gate * retrieved + (1 - gate) * x
-
+    def forward(
+        self,
+        inputs,
+        return_attention: bool = False,
+        return_features: bool = False
+    ):
+        raw_x = self.feature_extractor(inputs)   # [B, D]
+        x, attention_weights = self.apply_memory(raw_x)
         logits = self.classifier(x)
 
+        outputs = [logits]
+
         if return_attention:
-            return logits, attention_weights
-        return logits
+            outputs.append(attention_weights)
+
+        if return_features:
+            outputs.append(raw_x.detach())   # write this to memory later
+
+        if len(outputs) == 1:
+            return outputs[0]
+        return tuple(outputs)
 
 
 class CLIPDetectorWMemory(MemoryAugmentedDetector):
@@ -223,7 +248,7 @@ class CLIPDetectorWMemory(MemoryAugmentedDetector):
         fusion_type="concat"
     ):
         super().__init__(
-            feature_dim=2048,  # 1024
+            feature_dim=1024,  # 1024
             out_dim=out_dim,
             use_memory=use_memory,
             memory_size=memory_size,
@@ -235,10 +260,11 @@ class CLIPDetectorWMemory(MemoryAugmentedDetector):
 
     def feature_extractor(self, inputs):
         outputs = self.backbone(**inputs)
-        image_embeds, text_embeds = outputs.image_embeds, outputs.text_embeds
-        fused = torch.cat([image_embeds, text_embeds], dim=1)
+        image_embeds = outputs.image_embeds
+        text_embeds = outputs.text_embeds
+        x = torch.cat([image_embeds, text_embeds], dim=1)
 
-        return fused
+        return x
 
 
 class FLAVADetectorWMemory(MemoryAugmentedDetector):
