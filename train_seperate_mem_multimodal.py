@@ -148,7 +148,9 @@ for epoch in range(1, EPOCHS):
         inputs, labels = batch['inputs'], batch['label']
         inputs = {key: tensor.squeeze(1).to(device)
                   for key, tensor in inputs.items()}
-        labels = torch.tensor(batch['label'], dtype=torch.float64)
+        labels = batch['label'].to(
+            device=device, dtype=torch.float32).view(-1, 1)
+
         labels = labels.to(device)
 
         # return raw features so we can write to memory AFTER optimizer step
@@ -188,8 +190,9 @@ for epoch in range(1, EPOCHS):
                 device) for key, tensor in inputs_val.items()}
             label_val = batchv['label'].numpy().tolist()
 
-            label_val_tensor = torch.tensor(
-                batchv['label'], dtype=torch.float64).to(device)
+            label_val_tensor = batchv['label'].to(
+                device=device, dtype=torch.float32
+            ).view(-1, 1)
 
             output_val = model(inputs_val).float()   # [B, 1]
 
