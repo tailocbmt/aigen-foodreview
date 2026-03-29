@@ -69,7 +69,17 @@ def get_llava_caption(llava_pipe, image_path, original_title, original_descripti
             "content": [
                 {"type": "image", "url": image_path},
                 {"type": "text",
-                    "text": f"You are acting as a journalist generating content for a news media source. Original Headline: '{original_title}'. Original Description: '{original_description}'. Based on the provided image and this context, please write a highly realistic, human-like news caption and a short, synthetic article paragraph (3-4 sentences). Do not simply list the tags; weave them into a natural sentence that a journalist might use."},
+                    "text": (
+                        f"You are acting as a journalist generating content for a news media source. "
+                        f"Original Headline: '{original_title}'. "
+                        f"Original Description: '{original_description}'. "
+                        f"Based on the provided image and this context, please write a highly realistic, "
+                        f"human-like news title and a short, synthetic article paragraph (3-4 sentences). "
+                        f"Do not simply list the tags; weave them into a natural sentence that a journalist might use. "
+                        f"CRITICAL: You must format your entire response exactly like this: '[Title]. [News paragraph]'. "
+                        f"Do not include any labels or prefixes like 'Headline:', 'Caption:', or 'Article:'."
+                    )
+                 },
             ],
         },
     ]
