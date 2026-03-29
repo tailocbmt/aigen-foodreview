@@ -76,7 +76,7 @@ def get_llava_caption(llava_pipe, image_path, original_title, original_descripti
                         f"Based on the provided image and this context, please write a highly realistic, "
                         f"human-like news title and a short, synthetic article paragraph (3-4 sentences). "
                         f"Do not simply list the tags; weave them into a natural sentence that a journalist might use. "
-                        f"CRITICAL: You must format your entire response exactly like this: '[Title]. [News paragraph]'. "
+                        f"FORMAT: You must format your entire response exactly like this: '[Title]. [News paragraph]'. "
                         f"Do not include any labels or prefixes like 'Headline:', 'Caption:', or 'Article:'."
                     )
                  },
@@ -138,8 +138,6 @@ def main():
         except Exception as e:
             print(f"\nError captioning index {i}: {e}")
             generated_texts.append('FAILED_BLIP_ERROR')
-
-        print(f"Finished saving {csv_file_path}")
 
     df["fake_description"] = generated_texts
     df.to_csv(os.path.join(
