@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import torch
 from transformers import pipeline
-from datasets import load_dataset
+from PIL import Image
 from tqdm import tqdm
 
 # --- Configuration ---
@@ -67,7 +67,7 @@ def get_llava_caption(llava_pipe, image_path, original_title, original_descripti
         {
             "role": "user",
             "content": [
-                {"type": "image", "url": image_path},
+                {"type": "image", "image": image_path},
                 {"type": "text",
                     "text": f"You are acting as a journalist generating content for a news media source. Original Headline: '{original_title}'. Original Description: '{original_description}'. Based on the provided image and this context, please write a highly realistic, human-like news caption and a short, synthetic article paragraph (3-4 sentences). Do not simply list the tags; weave them into a natural sentence that a journalist might use."},
             ],
@@ -76,7 +76,7 @@ def get_llava_caption(llava_pipe, image_path, original_title, original_descripti
 
     with torch.no_grad():
         # max_length=None added to suppress the length warning!
-        out = llava_pipe(text=messages, max_new_tokens=50, max_length=None)
+        out = llava_pipe(text=messages, max_new_tokens=100, max_length=None)
 
     generated_data = out[0]['generated_text']
 
@@ -114,10 +114,11 @@ def main():
             continue
 
         try:
+            image_content = Image.open(image_path).convert("RGB")
             # The llava pipeline natively accepts PIL Images in memory!
             with torch.no_grad():
                 out = get_llava_caption(
-                    llava_pipe, image_path, title, description)
+                    llava_pipe, image_content, title, description)
 
             print(out)
             caption = out
