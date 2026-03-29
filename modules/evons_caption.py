@@ -67,7 +67,7 @@ def get_llava_caption(llava_pipe, image_path, original_title, original_descripti
         {
             "role": "user",
             "content": [
-                {"type": "image", "image": image_path},
+                {"type": "image", "url": image_path},
                 {"type": "text",
                     "text": f"You are acting as a journalist generating content for a news media source. Original Headline: '{original_title}'. Original Description: '{original_description}'. Based on the provided image and this context, please write a highly realistic, human-like news caption and a short, synthetic article paragraph (3-4 sentences). Do not simply list the tags; weave them into a natural sentence that a journalist might use."},
             ],
@@ -93,12 +93,11 @@ def main():
     llava_pipe = initialize_llava()
 
     # 2. Load the Original Dataset
-    input_csv_path = os.path.join(INPUT_DIR, f"evons.csv")
     csv_file_path = os.path.join(
         INPUT_DIR, CSV_INPUT_NAME
     )
 
-    df = pd.read_csv(input_csv_path, encoding='utf-8', low_memory=False)
+    df = pd.read_csv(csv_file_path, encoding='utf-8', low_memory=False)
 
     generated_texts = []
     for i in tqdm(range(len(df)), desc=f"Generating Data"):
@@ -107,18 +106,18 @@ def main():
         # Extract text and the native PIL Image object from the dataset
         title = item.get('title', '')
         description = item.get('description', '')
-        image_path = item.get('fake_img_paths')
+        image_path = item.get('fake_img_paths', '')
 
         if image_path is "":
             generated_texts.append("FAILED_NO_IMAGE_IN_DATASET")
             continue
 
         try:
-            image_content = Image.open(image_path).convert("RGB")
+            image_real_path = os.path.join(INPUT_DIR, image_path)
             # The llava pipeline natively accepts PIL Images in memory!
             with torch.no_grad():
                 out = get_llava_caption(
-                    llava_pipe, image_content, title, description)
+                    llava_pipe, image_real_path, title, description)
 
             print(out)
             caption = out
