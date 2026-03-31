@@ -52,11 +52,12 @@ available_models = ['vit', 'resnet']
 best_acc = 0
 if model_name == 'vit':
     model = ViTForImageClassification.from_pretrained(
-        "google/vit-base-patch16-224")
+        "google/vit-base-patch16-224", num_labels=2)
     tokenizer = AutoImageProcessor.from_pretrained(
         'google/vit-base-patch16-224')
 elif model_name == 'resnet':
-    model = ResNetForImageClassification.from_pretrained("microsoft/resnet-50")
+    model = ResNetForImageClassification.from_pretrained(
+        "microsoft/resnet-50", num_labels=2)
     tokenizer = AutoImageProcessor.from_pretrained("microsoft/resnet-50")
 else:
     pass
@@ -150,6 +151,8 @@ for epoch in range(1, EPOCHS + 1):
                 output_val, dim=-1).detach().cpu().numpy().tolist()
             pred_val.extend(predictions)
             labels_val.extend(label_val)
+
+            val_loss += output_val.loss
 
         avg_val_loss = val_loss / len(val_dataloader)
         acc = accuracy_score(labels_val, pred_val)

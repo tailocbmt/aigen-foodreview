@@ -16,7 +16,7 @@ with open(config_path, 'r') as file:
     config = json.load(file)
 
 # CONFIG
-model_name = 'bert'  # bert, gpt
+model_name = 'gpt'  # bert, gpt
 MAX_LENGTH = 512
 
 dataset = config.get('dataset', 'food_review')

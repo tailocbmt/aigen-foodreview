@@ -33,11 +33,13 @@ weights = sorted(os.listdir(output_dir))[-1]
 weights_dir = os.path.join(output_dir, weights)
 
 if model_name == 'vit':
-    model = ViTForImageClassification.from_pretrained(weights_dir)
+    model = ViTForImageClassification.from_pretrained(
+        weights_dir, num_labels=2)
     tokenizer = AutoImageProcessor.from_pretrained(
         'google/vit-base-patch16-224')
 elif model_name == 'resnet':
-    model = ResNetForImageClassification.from_pretrained(weights_dir)
+    model = ResNetForImageClassification.from_pretrained(
+        weights_dir, num_labels=2)
     tokenizer = AutoImageProcessor.from_pretrained("microsoft/resnet-50")
 else:
     pass
