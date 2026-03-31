@@ -154,9 +154,9 @@ for epoch in range(1, EPOCHS + 1):
             pred_val.extend(predictions)
             labels_val.extend(label_val)
 
-            val_loss += loss_val
+            # val_loss += loss_val
 
-        avg_val_loss = val_loss / len(val_dataloader)
+        # avg_val_loss = val_loss / len(val_dataloader)
         acc = accuracy_score(labels_val, pred_val)
         prec = precision_score(labels_val, pred_val, zero_division=0)
         rec = recall_score(labels_val, pred_val, zero_division=0)
@@ -172,7 +172,7 @@ for epoch in range(1, EPOCHS + 1):
 
         print(f'# Train Loss: {avg_train_loss}')
 
-        print(f'# Val Loss: {avg_val_loss}')
+        # print(f'# Val Loss: {avg_val_loss}')
         print(f'# Accuracy: {acc}')
         print(f'# Precision: {prec}')
         print(f'# Recall: {rec}')
@@ -182,7 +182,7 @@ for epoch in range(1, EPOCHS + 1):
             wandb.log({
                 "epoch": epoch,
                 "train/loss": avg_train_loss,
-                "val/loss": avg_val_loss,
+                # "val/loss": avg_val_loss,
                 "val/accuracy": acc,
                 "val/precision": prec,
                 "val/recall": rec,
