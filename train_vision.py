@@ -146,21 +146,21 @@ for epoch in range(1, EPOCHS + 1):
             label_val = batchv['label'].numpy().tolist()
 
             output_val = model(**inputs_val)
+            loss_val = output_val.loss
+
             output_val = torch.softmax(output_val.logits, dim=-1)
             predictions = torch.argmax(
                 output_val, dim=-1).detach().cpu().numpy().tolist()
             pred_val.extend(predictions)
             labels_val.extend(label_val)
 
-            val_loss += output_val.loss
+            val_loss += loss_val
 
         avg_val_loss = val_loss / len(val_dataloader)
         acc = accuracy_score(labels_val, pred_val)
-        prec = precision_score(labels_val, pred_val,
-                               average='macro', zero_division=0)
-        rec = recall_score(labels_val, pred_val,
-                           average='macro', zero_division=0)
-        f1 = f1_score(labels_val, pred_val, average='macro', zero_division=0)
+        prec = precision_score(labels_val, pred_val, zero_division=0)
+        rec = recall_score(labels_val, pred_val, zero_division=0)
+        f1 = f1_score(labels_val, pred_val, zero_division=0)
 
         logging.info(
             f'Epoch: {epoch}, '
