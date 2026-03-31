@@ -22,7 +22,7 @@ config_path = 'configs/multimodal_mem_config.json'
 with open(config_path, 'r') as file:
     config = json.load(file)
 
-model_name = config.get('model_name', 'resnet')  # resnet, vit
+model_name = 'resnet'  # resnet, vit
 dataset = config.get('dataset', 'food_review')   # food_review, hints_of_truth
 train_file = config.get('train_file', '')
 val_file = config.get('val_file', '')
