@@ -1,24 +1,32 @@
+import json
+
 from transformers import AutoImageProcessor, ViTForImageClassification, ResNetForImageClassification
 import torch
 import os
 import numpy as np
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader
-from modules.dataset import VisionDataset
+from modules.dataset import HintsOfTruthVisionDataset, VisionDataset
+
+# Define the path to your config file
+config_path = 'configs/multimodal_mem_config.json'
+
+# Open and read the JSON file
+with open(config_path, 'r') as file:
+    config = json.load(file)
 
 # CONFIG
 model_name = 'resnet'  # resnet, vit
-test_file = ""
-output_dir = f""
-image_dir = ""
-EPOCHS = 100
-BATCH_SIZE = 16
+
+dataset = config.get('dataset', 'food_review')
+test_file = config.get('test_file', '')
+image_dir = config.get('image_dir', '')
+output_dir = config.get('output_dir', '')
+BATCH_SIZE = config.get('BATCH_SIZE', 16)
+MAX_LENGTH = config.get('MAX_LENGTH', 512)
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 available_models = ['vit', 'resnet']
-
-# MODEL SELECTION
-if model_name not in available_models:
-    raise ValueError(f'{model_name} not in {available_models}.')
 
 # WEIGHTS
 weights = sorted(os.listdir(output_dir))[-1]
@@ -37,7 +45,12 @@ model = model.to(device)
 print(f'Model {model_name} loaded.')
 
 # DATA
-test = VisionDataset(test_file, image_dir, tokenizer)
+if dataset == "hints_of_truth":
+    test = HintsOfTruthVisionDataset(
+        test_file, image_dir, "test", MAX_LENGTH, tokenizer)
+else:
+    test = VisionDataset(test_file, image_dir, tokenizer)
+
 test_dataloader = DataLoader(test, BATCH_SIZE)
 print(f'Loaded Testing File: {test_file}.')
 

@@ -1,23 +1,31 @@
+import json
+
 from transformers import AutoTokenizer, BertForSequenceClassification
 from transformers import GPTNeoForSequenceClassification
 import torch
 import os
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader
-from modules.dataset import TextDataset
+from modules.dataset import HintsOfTruthTextDataset, TextDataset
+
+# Define the path to your config file
+config_path = 'configs/multimodal_mem_config.json'
+
+# Open and read the JSON file
+with open(config_path, 'r') as file:
+    config = json.load(file)
 
 # CONFIG
 model_name = 'gpt'  # bert, gpt
-test_file = ""
-BATCH_SIZE = 16
-MAX_LENGTH = 512
+
+dataset = config.get('dataset', 'food_review')
+test_file = config.get('test_file', '')
+output_dir = config.get('output_dir', '')
+BATCH_SIZE = config.get('BATCH_SIZE', 16)
+MAX_LENGTH = config.get('MAX_LENGTH', 512)
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 available_models = ['bert', 'gpt']
-output_dir = f""
-
-# MODEL SELECTION
-if model_name not in available_models:
-    raise ValueError(f'{model_name} not in {available_models}.')
 
 # WEIGHTS
 weights = sorted(os.listdir(output_dir))[-1]
@@ -41,7 +49,12 @@ model = model.to(device)
 print(f'Model {model_name} at weights {weights} loaded.')
 
 # DATA
-test = TextDataset(test_file, tokenizer, MAX_LENGTH)
+if dataset == "hints_of_truth":
+    test = HintsOfTruthTextDataset(
+        test_file, "test", tokenizer, MAX_LENGTH)
+else:
+    test = TextDataset(test_file, tokenizer, MAX_LENGTH)
+
 test_dataloader = DataLoader(test, BATCH_SIZE)
 print('Data loaded.')
 

@@ -137,3 +137,67 @@ class HintsOfTruthMultimodalDataset(Dataset):
         inputs = self.processor(text=text, images=images, return_tensors="pt",
                                 max_length=self.max_length, truncation=True, padding="max_length")
         return inputs
+
+
+class HintsOfTruthTextDataset(HintsOfTruthMultimodalDataset):
+    def __init__(self, file, split, tokenizer, max_length: int = None):
+        super().__init__(
+            file=file,
+            image_dir=None,
+            split=split,
+            processor=None,
+            max_length=max_length
+        )
+        self.tokenizer = tokenizer
+
+    def __getitem__(self, idx):
+        if idx < self.real_len:
+            row = self.real_data[idx]
+            text = str(row["text"])
+            label = 1
+        else:
+            row = self.fake_data.iloc[idx - self.real_len]
+            text = str(row["llava_caption"])
+            label = 0
+
+        if self.max_length:
+            encoded_input = self.tokenizer(
+                text,
+                return_tensors="pt",
+                max_length=self.max_length,
+                truncation=True,
+                padding="max_length"
+            )
+        else:
+            encoded_input = self.tokenizer(text, return_tensors="pt")
+
+        output = {"input": encoded_input, "label": label}
+        return output
+
+
+class HintsOfTruthVisionDataset(HintsOfTruthMultimodalDataset):
+    def __init__(self, file, image_dir, split, transform=None):
+        super().__init__(
+            file=file,
+            image_dir=image_dir,
+            split=split,
+            processor=None,
+            max_length=None
+        )
+        self.transform = transform
+
+    def __getitem__(self, index):
+        if index < self.real_len:
+            item = self.real_data[index]
+            image = item["image"].convert("RGB")
+            label = 1
+        else:
+            item = self.fake_data.iloc[index - self.real_len]
+            image_path = os.path.join(self.image_dir, item["saved_image_path"])
+            image = Image.open(image_path).convert("RGB")
+            label = 0
+
+        if self.transform:
+            image = self.transform(image, return_tensors="pt")
+
+        return {"input": image, "label": label}
