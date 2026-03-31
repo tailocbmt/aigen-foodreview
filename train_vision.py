@@ -164,7 +164,7 @@ for epoch in range(1, EPOCHS + 1):
 
         logging.info(
             f'Epoch: {epoch}, '
-            f'Train Loss: {avg_train_loss}, Val Loss: {avg_val_loss}, '
+            f'Train Loss: {avg_train_loss},'
             f'Val Acc: {acc}, '
             f'Precision: {prec}, Recall: {rec}, F1: {f1}, '
             f'LR: {optimiser.param_groups[0]["lr"]}, Batch Size: {BATCH_SIZE}.'
