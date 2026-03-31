@@ -16,13 +16,13 @@ with open(config_path, 'r') as file:
     config = json.load(file)
 
 # CONFIG
-model_name = 'gpt'  # bert, gpt
+model_name = 'bert'  # bert, gpt
+MAX_LENGTH = 512
 
 dataset = config.get('dataset', 'food_review')
 test_file = config.get('test_file', '')
 output_dir = config.get('output_dir', '')
 BATCH_SIZE = config.get('BATCH_SIZE', 16)
-MAX_LENGTH = config.get('MAX_LENGTH', 512)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 available_models = ['bert', 'gpt']
