@@ -115,17 +115,12 @@ for epoch in range(1, EPOCHS + 1):
     for i, batch in enumerate(train_dataloader):
         torch.cuda.empty_cache()
         optimiser.zero_grad()
-
         if i % 100 == 0:
             print(f'{i}th batch..')
-
-        inputs = batch['input']
-        inputs = {k: v.to(device) for k, v in inputs.items()}
+        inputs = batch['input'].to(device)
         inputs['pixel_values'] = inputs['pixel_values'].squeeze(1)
 
-        labels = batch['label']
-        if not torch.is_tensor(labels):
-            labels = torch.tensor(labels)
+        labels = torch.tensor(batch['label'])
         labels = labels.to(device)
 
         output = model(**inputs, labels=labels)
@@ -133,13 +128,7 @@ for epoch in range(1, EPOCHS + 1):
         loss.backward()
         optimiser.step()
 
-        train_loss += loss.item()
-
-        output_train = torch.softmax(output.logits, dim=-1)
-        predictions_train = torch.argmax(
-            output_train, dim=-1).detach().cpu().numpy().tolist()
-        labels_train.extend(labels.detach().cpu().numpy().tolist())
-        pred_train.extend(predictions_train)
+        train_loss += loss
 
     avg_train_loss = train_loss / len(train_dataloader)
 
@@ -151,25 +140,16 @@ for epoch in range(1, EPOCHS + 1):
     with torch.no_grad():
         print('Validating..')
         for j, batchv in enumerate(val_dataloader):
-            inputs_val = batchv['input']
-            inputs_val = {k: v.to(device) for k, v in inputs_val.items()}
+            inputs_val = batchv['input'].to(device)
             inputs_val['pixel_values'] = inputs_val['pixel_values'].squeeze(1)
+            label_val = batchv['label'].numpy().tolist()
 
-            label_val = batchv['label']
-            if not torch.is_tensor(label_val):
-                label_val = torch.tensor(label_val)
-            label_val = label_val.to(device)
-
-            output_val = model(**inputs_val, labels=label_val)
-            loss_val = output_val.loss
-            val_loss += loss_val.item()
-
-            output_probs = torch.softmax(output_val.logits, dim=-1)
+            output_val = model(**inputs_val)
+            output_val = torch.softmax(output_val.logits, dim=-1)
             predictions = torch.argmax(
-                output_probs, dim=-1).detach().cpu().numpy().tolist()
-
+                output_val, dim=-1).detach().cpu().numpy().tolist()
             pred_val.extend(predictions)
-            labels_val.extend(label_val.detach().cpu().numpy().tolist())
+            labels_val.extend(label_val)
 
         avg_val_loss = val_loss / len(val_dataloader)
         acc = accuracy_score(labels_val, pred_val)
@@ -180,7 +160,7 @@ for epoch in range(1, EPOCHS + 1):
         logging.info(
             f'Epoch: {epoch}, '
             f'Train Loss: {avg_train_loss}, Val Loss: {avg_val_loss}, '
-            f'Train Acc: {train_acc}, Val Acc: {acc}, '
+            f'Val Acc: {acc}, '
             f'Precision: {prec}, Recall: {rec}, F1: {f1}, '
             f'LR: {optimiser.param_groups[0]["lr"]}, Batch Size: {BATCH_SIZE}.'
         )
