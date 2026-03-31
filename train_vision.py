@@ -52,12 +52,12 @@ available_models = ['vit', 'resnet']
 best_acc = 0
 if model_name == 'vit':
     model = ViTForImageClassification.from_pretrained(
-        "google/vit-base-patch16-224", num_labels=2)
+        "google/vit-base-patch16-224", num_labels=2, ignore_mismatched_sizes=True)
     tokenizer = AutoImageProcessor.from_pretrained(
         'google/vit-base-patch16-224')
 elif model_name == 'resnet':
     model = ResNetForImageClassification.from_pretrained(
-        "microsoft/resnet-50", num_labels=2)
+        "microsoft/resnet-50", num_labels=2, ignore_mismatched_sizes=True)
     tokenizer = AutoImageProcessor.from_pretrained("microsoft/resnet-50")
 else:
     pass
