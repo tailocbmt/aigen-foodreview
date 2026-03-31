@@ -153,9 +153,11 @@ for epoch in range(1, EPOCHS + 1):
 
         avg_val_loss = val_loss / len(val_dataloader)
         acc = accuracy_score(labels_val, pred_val)
-        prec = precision_score(labels_val, pred_val)
-        rec = recall_score(labels_val, pred_val)
-        f1 = f1_score(labels_val, pred_val)
+        prec = precision_score(labels_val, pred_val,
+                               average='macro', zero_division=0)
+        rec = recall_score(labels_val, pred_val,
+                           average='macro', zero_division=0)
+        f1 = f1_score(labels_val, pred_val, average='macro', zero_division=0)
 
         logging.info(
             f'Epoch: {epoch}, '
