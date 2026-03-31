@@ -49,7 +49,7 @@ print(f'Model {model_name} loaded.')
 # DATA
 if dataset == "hints_of_truth":
     test = HintsOfTruthVisionDataset(
-        test_file, image_dir, "test", MAX_LENGTH, tokenizer)
+        test_file, image_dir, "test", tokenizer)
 else:
     test = VisionDataset(test_file, image_dir, tokenizer)
 
