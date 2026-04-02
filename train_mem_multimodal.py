@@ -1,4 +1,5 @@
 import json
+from sklearn.model_selection import train_test_split
 from transformers import CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
 import torch
 import os
@@ -6,10 +7,9 @@ import logging
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import StepLR
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from torch.utils.data import DataLoader
-from modules.dataset import MultimodalDataset, HintsOfTruthMultimodalDataset
+from torch.utils.data import DataLoader, Subset, random_split
+from modules.dataset import EvonsMultimodalDataset, MultimodalDataset, HintsOfTruthMultimodalDataset
 from larimar_base.base_models import CLIPDetectorWMemory, FLAVADetectorWMemory
-from larimar_base.exp_models import CLIPDetectorSeparateMemory
 import torch.nn as nn
 try:
     import wandb
@@ -102,6 +102,34 @@ if dataset == "hints_of_truth":
         train_file, image_dir, "dev1", processor, MAX_LENGTH)
     val = HintsOfTruthMultimodalDataset(
         val_file, image_dir, "dev2", processor, MAX_LENGTH)
+elif dataset == "evons":
+    real_image_dir = config.get('real_image_dir')
+    full_data = EvonsMultimodalDataset(
+        train_file, real_image_dir, image_dir, processor, MAX_LENGTH)
+
+    # indices of dataset
+    indices = list(range(len(full_data)))
+    labels = [full_data[i]['label']
+              for i in indices]  # adjust based on your dataset
+
+    # 1. Train (80%) vs temp (20%)
+    train_idx, temp_idx, train_labels, temp_labels = train_test_split(
+        indices,
+        labels,
+        test_size=0.2,
+        stratify=labels,
+        random_state=42
+    )
+
+    # 2. Split temp → val (10%) + test (10%)
+    val_idx, test_idx = train_test_split(
+        temp_idx,
+        test_size=0.5,
+        stratify=temp_labels,
+        random_state=42
+    )
+    train_dataset = Subset(full_data, train_idx)
+    val_dataset = Subset(full_data, val_idx)
 else:
     train = MultimodalDataset(train_file, image_dir, processor, MAX_LENGTH)
     val = MultimodalDataset(val_file, image_dir, processor, MAX_LENGTH)

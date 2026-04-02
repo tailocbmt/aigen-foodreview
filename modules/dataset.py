@@ -201,3 +201,46 @@ class HintsOfTruthVisionDataset(HintsOfTruthMultimodalDataset):
             image = self.transform(image, return_tensors="pt")
 
         return {"input": image, "label": label}
+
+
+class EvonsMultimodalDataset(Dataset):
+    def __init__(self, file, real_image_dir, fake_image_dir, processor, max_length):
+        super().__init__()
+        self.file = file
+
+        self.real_data = pd.read_csv(file)
+        self.fake_data = self.real_data
+        self.real_image_dir = real_image_dir
+        self.fake_image_dir = fake_image_dir
+        self.processor = processor
+        self.max_length = max_length
+
+        self.real_len = len(self.real_data)
+        self.fake_len = len(self.fake_data)
+        self.total_len = self.real_len + self.fake_len
+
+    def __len__(self):
+        return len(self.total_len)
+
+    def __getitem__(self, index):
+        if index < self.real_len:
+            item = self.real_data.iloc[index]
+            image_name = item.image_fn
+            text = item.real_text
+            image_path = os.path.join(self.real_image_dir, str(image_name))
+            label = 1
+        else:
+            item = self.fake_data.iloc[index]
+            image_name = item.saved_image_paths
+            text = item.fake_text
+            image_path = os.path.join(self.fake_image_dir, str(image_name))
+            label = 0
+
+        image = Image.open(image_path).convert('RGB')
+        inputs = self.tokenize(text=[text], images=[image])
+        return {'inputs': inputs, 'label': label}
+
+    def tokenize(self, text: list, images: list):
+        inputs = self.processor(text=text, images=images, return_tensors="pt",
+                                max_length=self.max_length, truncation=True, padding="max_length")
+        return inputs

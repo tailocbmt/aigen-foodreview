@@ -1,4 +1,5 @@
 {
+  "seed": 42,
   "model_name": "clip",
   "MAX_LENGTH": 77,
   "dataset": "hints_of_truth",
@@ -7,6 +8,7 @@
   "test_file": "./data/test.csv",
   "logging_file": "train",
   "output_dir": "clip_mem_exp",
+  "real_image_dir": "./images",
   "image_dir": "./generated_fake_images",
   "EPOCHS": 100,
   "BATCH_SIZE": 32,

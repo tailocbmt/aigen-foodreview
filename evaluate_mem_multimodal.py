@@ -4,7 +4,9 @@ import json
 from transformers import CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader
-from modules.dataset import HintsOfTruthMultimodalDataset, MultimodalDataset
+from sklearn.model_selection import train_test_split
+from torch.utils.data import Subset
+from modules.dataset import EvonsMultimodalDataset, HintsOfTruthMultimodalDataset, MultimodalDataset
 from larimar_base.base_models import CLIPDetectorWMemory, FLAVADetectorWMemory
 
 # CONFIG
@@ -61,6 +63,33 @@ print(f'Model {model_name} loaded at weights: {weights}.')
 if dataset == "hints_of_truth":
     test = HintsOfTruthMultimodalDataset(
         test_file, image_dir, "test", processor, MAX_LENGTH)
+elif dataset == "evons":
+    real_image_dir = config.get('real_image_dir')
+    full_data = EvonsMultimodalDataset(
+        test_file, real_image_dir, image_dir, processor, MAX_LENGTH)
+
+    # indices of dataset
+    indices = list(range(len(full_data)))
+    labels = [full_data[i]['label']
+              for i in indices]  # adjust based on your dataset
+
+    # 1. Train (80%) vs temp (20%)
+    train_idx, temp_idx, train_labels, temp_labels = train_test_split(
+        indices,
+        labels,
+        test_size=0.2,
+        stratify=labels,
+        random_state=42
+    )
+
+    # 2. Split temp → val (10%) + test (10%)
+    val_idx, test_idx = train_test_split(
+        temp_idx,
+        test_size=0.5,
+        stratify=temp_labels,
+        random_state=42
+    )
+    test_dataset = Subset(full_data, test_idx)
 else:
     test = MultimodalDataset(test_file, image_dir, processor, MAX_LENGTH)
 
