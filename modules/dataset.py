@@ -220,7 +220,7 @@ class EvonsMultimodalDataset(Dataset):
         self.total_len = self.real_len + self.fake_len
 
     def __len__(self):
-        return len(self.total_len)
+        return self.total_len
 
     def __getitem__(self, index):
         if index < self.real_len:
