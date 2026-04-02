@@ -2,7 +2,7 @@ import pandas as pd
 import re
 
 # Load CSV
-df = pd.read_csv("data/evons_original_captions.csv")
+df = pd.read_csv("evons_data/evons_original_captions.csv")
 
 # Function to clean text
 
@@ -24,4 +24,4 @@ df["real_text"] = (
 df["fake_text"] = df["fake_description"].apply(clean_text)
 
 # Save back
-df.to_csv("real_evons_captions.csv", index=False)
+df.to_csv("evons_data/real_evons_captions.csv", index=False)
