@@ -226,8 +226,10 @@ class EvonsMultimodalDataset(Dataset):
         if index < self.real_len:
             item = self.real_data.iloc[index]
             image_name = item.image_fn
+            media_source = item.media_source
             text = item.real_text
-            image_path = os.path.join(self.real_image_dir, str(image_name))
+            image_path = os.path.join(
+                self.real_image_dir, media_source, str(image_name))
             label = 1
         else:
             item = self.fake_data.iloc[index]
