@@ -211,7 +211,7 @@ class EvonsMultimodalDataset(Dataset):
 
         self.real_data = pd.read_csv(file)
         self.fake_data = deepcopy(self.real_data)
-        self.fake_data['is_fake'] = 0
+        self.fake_data['is_fake'] = 1
         self.data = pd.concat(
             [self.real_data, self.fake_data], ignore_index=True)
 
