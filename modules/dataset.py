@@ -235,7 +235,7 @@ class EvonsMultimodalDataset(Dataset):
             image_path = os.path.join(
                 self.real_image_dir, media_source, str(image_name))
         else:
-            image_name = item.saved_image_paths
+            image_name = item.fake_img_paths
             text = item.fake_text
             image_path = os.path.join(self.fake_image_dir, str(image_name))
 
