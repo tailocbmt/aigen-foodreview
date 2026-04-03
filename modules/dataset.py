@@ -220,7 +220,7 @@ class EvonsMultimodalDataset(Dataset):
         self.processor = processor
         self.max_length = max_length
 
-        self.total_len = self.data
+        self.total_len = len(self.data)
 
     def __len__(self):
         return self.total_len
