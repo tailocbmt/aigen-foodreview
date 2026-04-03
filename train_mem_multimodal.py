@@ -128,8 +128,8 @@ elif dataset == "evons":
         stratify=temp_labels,
         random_state=42
     )
-    train_dataset = Subset(full_data, train_idx)
-    val_dataset = Subset(full_data, val_idx)
+    train = Subset(full_data, train_idx)
+    val = Subset(full_data, val_idx)
 else:
     train = MultimodalDataset(train_file, image_dir, processor, MAX_LENGTH)
     val = MultimodalDataset(val_file, image_dir, processor, MAX_LENGTH)

@@ -1,3 +1,4 @@
+from copy import deepcopy
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -209,34 +210,35 @@ class EvonsMultimodalDataset(Dataset):
         self.file = file
 
         self.real_data = pd.read_csv(file)
-        self.fake_data = self.real_data
+        self.fake_data = deepcopy(self.real_data)
+        self.fake_data['is_fake'] = 0
+        self.data = pd.concat(
+            [self.real_data, self.fake_data], ignore_index=True)
+
         self.real_image_dir = real_image_dir
         self.fake_image_dir = fake_image_dir
         self.processor = processor
         self.max_length = max_length
 
-        self.real_len = len(self.real_data)
-        self.fake_len = len(self.fake_data)
-        self.total_len = self.real_len + self.fake_len
+        self.total_len = self.data
 
     def __len__(self):
         return self.total_len
 
     def __getitem__(self, index):
-        if index < self.real_len:
+        item = self.data.iloc[index]
+        label = item.is_fake
+        if label == 0:
             item = self.real_data.iloc[index]
             image_name = item.image_fn
             media_source = item.media_source
             text = item.real_text
             image_path = os.path.join(
                 self.real_image_dir, media_source, str(image_name))
-            label = 1
         else:
-            item = self.fake_data.iloc[index]
             image_name = item.saved_image_paths
             text = item.fake_text
             image_path = os.path.join(self.fake_image_dir, str(image_name))
-            label = 0
 
         image = Image.open(image_path).convert('RGB')
         inputs = self.tokenize(text=[text], images=[image])

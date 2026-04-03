@@ -89,7 +89,7 @@ elif dataset == "evons":
         stratify=temp_labels,
         random_state=42
     )
-    test_dataset = Subset(full_data, test_idx)
+    test = Subset(full_data, test_idx)
 else:
     test = MultimodalDataset(test_file, image_dir, processor, MAX_LENGTH)
 
