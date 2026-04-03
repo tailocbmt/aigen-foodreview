@@ -229,7 +229,6 @@ class EvonsMultimodalDataset(Dataset):
         item = self.data.iloc[index]
         label = item.is_fake
         if label == 0:
-            item = self.real_data.iloc[index]
             image_name = item.image_fn
             media_source = item.media_source
             text = item.real_text
