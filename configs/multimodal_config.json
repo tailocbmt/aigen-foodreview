@@ -7,7 +7,7 @@
   "val_file": "./evons_data/real_evons_captions.csv",
   "test_file": "./evons_data/real_evons_captions.csv",
   "logging_file": "train",
-  "output_dir": "evons_clip_mem",
+  "output_dir": "evons_clip_no_mem",
   "real_image_dir": "./evons_data/images",
   "image_dir": "./evons_data/generated_evons",
   "EPOCHS": 100,
