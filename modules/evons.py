@@ -119,7 +119,7 @@ def main():
                     guidance_scale=0.0,
                     height=512,
                     width=512,
-                    # max_sequence_length=256
+                    max_sequence_length=256
                 ).images[0]
 
             # Fixed filename to include the split so they don't overwrite each other
@@ -136,12 +136,16 @@ def main():
 
             # Free memory
             del image_result
-            gc.collect()
-            torch.cuda.empty_cache()
+
+            # Do cleanup occasionally, not every image
+            if i % 50 == 0:
+                gc.collect()
 
         except Exception as e:
             print(f"\nError processing index {i}: {e}")
             saved_image_paths.append("")
+            torch.cuda.empty_cache()
+            gc.collect()
             continue
 
     df["fake_img_paths"] = saved_image_paths
