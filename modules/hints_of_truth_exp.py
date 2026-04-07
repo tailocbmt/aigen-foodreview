@@ -58,33 +58,28 @@ def rewrite_caption(tokenizer, model, original_text):
         },
     ]
 
-    try:
-        text = tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
+    text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+    )
+    inputs = tokenizer(text, return_tensors="pt").to(model.device)
+
+    with torch.inference_mode():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=120,
+            temperature=0.4,
+            do_sample=True,
+            pad_token_id=tokenizer.eos_token_id,
         )
-        inputs = tokenizer(text, return_tensors="pt").to(model.device)
 
-        with torch.inference_mode():
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=120,
-                temperature=0.4,
-                do_sample=True,
-                pad_token_id=tokenizer.eos_token_id,
-            )
+    generated_ids = outputs[0][inputs["input_ids"].shape[1]:]
+    rewritten = tokenizer.decode(
+        generated_ids, skip_special_tokens=True
+    ).strip()
 
-        generated_ids = outputs[0][inputs["input_ids"].shape[1]:]
-        rewritten = tokenizer.decode(
-            generated_ids, skip_special_tokens=True
-        ).strip()
-
-        return rewritten if rewritten else original_text
-
-    except Exception as e:
-        print(f"Caption rewrite failed, using original text. Error: {e}")
-        return original_text
+    return rewritten
 
 
 def initialize_sd_models():
@@ -176,6 +171,7 @@ def main():
                 # 1. Rewrite caption with local Qwen
                 rewritten_text = rewrite_caption(
                     tokenizer, qwen_model, original_text)
+                print(rewritten_text)
 
                 # 2. Generate image using SD3.5 from rewritten caption
                 with torch.inference_mode():
