@@ -2,6 +2,7 @@ import os
 import csv
 import torch
 import gc
+import pandas as pd
 from datasets import load_dataset
 from diffusers import (
     FluxPipeline,
@@ -11,12 +12,11 @@ from diffusers import (
     SD3Transformer2DModel,
 )
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from PIL import Image
 from tqdm import tqdm
 
 # --- Configuration ---
-MODEL_NAME = "sd"
-OUTPUT_DIR = "hints_of_truth_sd_exp"
+MODEL_NAME = "flux"
+OUTPUT_DIR = f"hints_of_truth_{MODEL_NAME}_exp"
 CSV_OUTPUT_NAME = "generated_images_{split}.csv"
 IMAGE_MODEL_ID = "https://huggingface.co/city96/stable-diffusion-3.5-large-turbo-gguf/blob/main/sd3.5_large_turbo-Q8_0.gguf"
 
@@ -147,31 +147,34 @@ def main():
             OUTPUT_DIR, CSV_OUTPUT_NAME.format(split=split)
         )
 
-        csv_file = open(csv_file_path, mode='w', newline='', encoding='utf-8')
-        csv_writer = csv.writer(csv_file)
-        csv_writer.writerow(
-            ['original_index', 'original_text',
-                'rewritten_text', 'saved_sd_image_path']
-        )
+        csv_file = pd.read_csv(csv_file_path)
+        saved_flux_image_path = []
+        # csv_file = open(csv_file_path, mode='w', newline='', encoding='utf-8')
+        # csv_writer = csv.writer(csv_file)
+        # csv_writer.writerow(
+        #     ['original_index', 'original_text',
+        #         'rewritten_text', 'saved_sd_image_path']
+        # )
 
         print(f"\nStarting generation of {split} split")
         dataset = full_dataset[split]
         print(dataset)
         print(len(dataset))
 
-        for i in tqdm(range(len(dataset)), desc=f"Generating {split} Data"):
-            original_text = dataset[i]['text']
+        for i in tqdm(range(len(csv_file)), desc=f"Generating {split} Data"):
+            original_text = csv_file.iloc[i]['rewritten_text']
 
             if not original_text:
                 print(f"Row {i} has no text, skipping...")
-                csv_writer.writerow([i, '', '', 'FAILED_NO_TEXT'])
+                saved_flux_image_path.append('FAILED_NO_TEXT')
+                # csv_writer.writerow([i, '', '', 'FAILED_NO_TEXT'])
                 continue
 
             try:
                 # 1. Rewrite caption with local Qwen
-                rewritten_text = rewrite_caption(
-                    tokenizer, qwen_model, original_text)
-                print(rewritten_text)
+                # rewritten_text = rewrite_caption(
+                #     tokenizer, qwen_model, original_text)
+                rewritten_text = original_text
 
                 # 2. Generate image using SD3.5 from rewritten caption
                 with torch.inference_mode():
@@ -189,9 +192,10 @@ def main():
                 image_result.save(image_relative_path)
 
                 # 3. Write all data to CSV
-                csv_writer.writerow(
-                    [i, original_text, rewritten_text, image_filename]
-                )
+                # csv_writer.writerow(
+                #     [i, original_text, rewritten_text, image_filename]
+                # )
+                saved_flux_image_path.append(image_filename)
 
                 del image_result
                 gc.collect()
@@ -199,12 +203,14 @@ def main():
 
             except Exception as e:
                 print(f"\nError processing index {i}: {e}")
-                csv_writer.writerow(
-                    [i, original_text, '', 'FAILED_GPU_ERROR']
-                )
+                # csv_writer.writerow(
+                #     [i, original_text, '', 'FAILED_GPU_ERROR']
+                # )
+                saved_flux_image_path.append('FAILED_NO_TEXT')
                 continue
 
-        csv_file.close()
+        # csv_file.close()
+        csv_file.to_csv(csv_file_path, index=False)
 
 
 if __name__ == "__main__":
