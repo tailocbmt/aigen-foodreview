@@ -10,6 +10,7 @@ from tqdm import tqdm
 # --- Configuration ---
 MODEL_NAME = "flux"
 OUTPUT_DIR = f"evons_data"
+IMAGE_OUTPUT_DIR = f"evons_qwen_{MODEL_NAME}"
 CSV_OUTPUT_NAME = "evons_exp.csv"
 IMAGE_MODEL_ID = "https://huggingface.co/city96/FLUX.1-schnell-gguf/blob/main/flux1-schnell-Q8_0.gguf"
 OLLAMA_MODEL = "llava:7b"  # Added Llava model configuration
@@ -191,7 +192,8 @@ def main():
 
             # Fixed filename to include the split so they don't overwrite each other
             image_filename = f"fake_img_{i:04d}.png"
-            image_relative_path = os.path.join(OUTPUT_DIR, image_filename)
+            image_relative_path = os.path.join(
+                OUTPUT_DIR, IMAGE_OUTPUT_DIR, image_filename)
 
             # Save the image to disk FIRST so later steps can read the file
             image_result.save(image_relative_path)
