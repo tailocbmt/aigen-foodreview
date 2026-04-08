@@ -166,6 +166,7 @@ def main():
 
             if not original_text:
                 print(f"Row {i} has no text, skipping...")
+                saved_flux_image_path.append('FAILED_NO_TEXT')
                 csv_writer.writerow([i, '', '', 'FAILED_NO_TEXT'])
                 continue
 

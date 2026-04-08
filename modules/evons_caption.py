@@ -129,7 +129,6 @@ def main():
                 out = get_llava_caption(
                     llava_pipe, image_real_path, title, description)
 
-            print(out)
             caption = out
 
             # Write to CSV
