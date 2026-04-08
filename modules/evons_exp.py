@@ -12,7 +12,7 @@ MODEL_NAME = "sd"
 OUTPUT_DIR = f"evons_data"
 IMAGE_OUTPUT_DIR = f"evons_qwen_{MODEL_NAME}"
 CSV_OUTPUT_NAME = "evons_exp.csv"
-IMAGE_MODEL_ID = "https://huggingface.co/city96/stable-diffusion-3.5-large-turbo-gguf/blob/main/sd3.5_large_turbo-Q8_0.gguf"
+IMAGE_MODEL_ID = "https://huggingface.co/city96/city96/stable-diffusion-3.5-large-gguf/blob/main/sd3.5_large-Q8_0.gguf"
 OLLAMA_MODEL = "llava:7b"  # Added Llava model configuration
 
 # Local Qwen model for caption rewriting
@@ -167,7 +167,7 @@ def main():
         rewritten_description = rewrite_caption(
             tokenizer, qwen_model, description)
 
-        original_text = f"{title}. {description}".strip()
+        original_text = f"rewritten_description".strip()
         if original_text.startswith(". "):
             original_text = original_text[2:]
 
@@ -177,9 +177,9 @@ def main():
                 image_result = pipe(
                     prompt=original_text,
                     num_inference_steps=4,
-                    guidance_scale=0.0,
-                    height=512,
-                    width=512,
+                    guidance_scale=3.5,
+                    height=1024,
+                    width=1024,
                     max_sequence_length=256
                 ).images[0]
 
