@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 # --- Configuration ---
 MODEL_NAME = "flux"
-OUTPUT_DIR = f"evons_data/evons_qwen_{MODEL_NAME}"
+OUTPUT_DIR = f"evons_data"
 CSV_OUTPUT_NAME = "evons_exp.csv"
 IMAGE_MODEL_ID = "https://huggingface.co/city96/FLUX.1-schnell-gguf/blob/main/flux1-schnell-Q8_0.gguf"
 OLLAMA_MODEL = "llava:7b"  # Added Llava model configuration
