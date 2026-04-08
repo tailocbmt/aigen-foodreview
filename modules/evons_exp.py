@@ -9,8 +9,8 @@ from tqdm import tqdm
 
 # --- Configuration ---
 MODEL_NAME = "flux"
-OUTPUT_DIR = f"evons_{MODEL_NAME}"
-CSV_OUTPUT_NAME = "evons_generated_images.csv"
+OUTPUT_DIR = f"evons_data/evons_qwen_{MODEL_NAME}"
+CSV_OUTPUT_NAME = "evons_exp.csv"
 IMAGE_MODEL_ID = "https://huggingface.co/city96/FLUX.1-schnell-gguf/blob/main/flux1-schnell-Q8_0.gguf"
 OLLAMA_MODEL = "llava:7b"  # Added Llava model configuration
 
@@ -221,8 +221,8 @@ def main():
             gc.collect()
             continue
 
-    df["rewritten_title"] = titles
-    df["rewritten_description"] = descriptions
+    df["qwen_rewritten_title"] = titles
+    df["qwen_rewritten_description"] = descriptions
     df["fake_img_paths"] = saved_image_paths
     df.to_csv(csv_file_path, index=False)
 
