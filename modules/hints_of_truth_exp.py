@@ -19,7 +19,7 @@ MODEL_NAME = "flux"
 INPUT_DIR = f"hints_of_truth_sd_exp"
 OUTPUT_DIR = f"hints_of_truth_{MODEL_NAME}_exp"
 CSV_OUTPUT_NAME = "generated_images_{split}.csv"
-IMAGE_MODEL_ID = "https://huggingface.co/city96/stable-diffusion-3.5-large-turbo-gguf/blob/main/sd3.5_large_turbo-Q8_0.gguf"
+IMAGE_MODEL_ID = "https://huggingface.co/city96/FLUX.1-schnell-gguf/blob/main/flux1-schnell-Q8_0.gguf"
 
 # Local Qwen model for caption rewriting
 QWEN_MODEL_ID = "Qwen/Qwen2.5-1.5B-Instruct"
@@ -134,7 +134,7 @@ def initialize_flux_models():
 
 
 def main():
-    tokenizer, qwen_model = initialize_qwen_model()
+    # tokenizer, qwen_model = initialize_qwen_model()
     if MODEL_NAME == "sd":
         pipe = initialize_sd_models()
     else:
