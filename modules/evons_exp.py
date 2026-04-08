@@ -109,30 +109,23 @@ def initialize_flux_models():
     """Initializes the FLUX pipeline using the Q8_0 GGUF model."""
     print("Loading the 12.7GB GGUF transformer...")
 
-    # NOTE: You can use the Hugging Face URL directly, OR if you already downloaded
-    # the 12.7GB file to your server, replace this URL with the local file path
-    # (e.g., ckpt_path = "./flux1-schnell-Q8_0.gguf")
-
-    # 1. Load the massive transformer using the new GGUF single-file loader
     transformer = FluxTransformer2DModel.from_single_file(
         IMAGE_MODEL_ID,
         quantization_config=GGUFQuantizationConfig(
-            compute_dtype=torch.bfloat16),
+            compute_dtype=torch.bfloat16
+        ),
         torch_dtype=torch.bfloat16,
     )
 
     print("Loading the rest of the FLUX pipeline...")
 
-    # 2. Load the pipeline, passing in our custom GGUF transformer
     pipe = FluxPipeline.from_pretrained(
         "black-forest-labs/FLUX.1-schnell",
         transformer=transformer,
-        torch_dtype=torch.bfloat16
+        torch_dtype=torch.bfloat16,
     )
 
-    # enable_model_cpu_offload() is highly recommended for FLUX on a 24GB RTX 3090
     pipe.to("cuda")
-
     return pipe
 
 
