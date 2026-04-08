@@ -174,7 +174,7 @@ def main():
             with torch.inference_mode():
                 image_result = pipe(
                     prompt=original_text,
-                    num_inference_steps=1,
+                    num_inference_steps=8,
                     guidance_scale=3.5,
                     height=768,
                     width=768,
