@@ -18,7 +18,7 @@ OLLAMA_MODEL = "llava:7b"  # Added Llava model configuration
 # Local Qwen model for caption rewriting
 QWEN_MODEL_ID = "Qwen/Qwen2.5-1.5B-Instruct"
 
-os.makedirs(OUTPUT_DIR, IMAGE_OUTPUT_DIR, exist_ok=True)
+os.makedirs(f"{OUTPUT_DIR}/{IMAGE_OUTPUT_DIR}", exist_ok=True)
 
 
 def initialize_qwen_model():
