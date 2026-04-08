@@ -12,7 +12,7 @@ MODEL_NAME = "sd"
 OUTPUT_DIR = f"evons_data"
 IMAGE_OUTPUT_DIR = f"evons_qwen_{MODEL_NAME}"
 CSV_OUTPUT_NAME = "evons_exp.csv"
-IMAGE_MODEL_ID = "https://huggingface.co/city96/stable-diffusion-3.5-large-gguf/blob/main/sd3.5_large-Q8_0.gguf"
+IMAGE_MODEL_ID = "https://huggingface.co/city96/stable-diffusion-3.5-large-turbo-gguf/blob/main/sd3.5_large_turbo-Q8_0.gguf"
 OLLAMA_MODEL = "llava:7b"  # Added Llava model configuration
 
 # Local Qwen model for caption rewriting
