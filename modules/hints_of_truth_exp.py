@@ -16,6 +16,7 @@ from tqdm import tqdm
 
 # --- Configuration ---
 MODEL_NAME = "flux"
+INPUT_DIR = f"hints_of_truth_sd_exp"
 OUTPUT_DIR = f"hints_of_truth_{MODEL_NAME}_exp"
 CSV_OUTPUT_NAME = "generated_images_{split}.csv"
 IMAGE_MODEL_ID = "https://huggingface.co/city96/stable-diffusion-3.5-large-turbo-gguf/blob/main/sd3.5_large_turbo-Q8_0.gguf"
@@ -144,7 +145,7 @@ def main():
 
     for split in ['dev1', 'dev2', 'test']:
         csv_file_path = os.path.join(
-            OUTPUT_DIR, CSV_OUTPUT_NAME.format(split=split)
+            INPUT_DIR, CSV_OUTPUT_NAME.format(split=split)
         )
 
         csv_file = pd.read_csv(csv_file_path)
