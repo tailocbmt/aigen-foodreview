@@ -175,10 +175,9 @@ def main():
                 image_result = pipe(
                     prompt=original_text,
                     num_inference_steps=5,
-                    guidance_scale=3.5,
+                    guidance_scale=4,
                     height=512,
-                    width=512,
-                    max_sequence_length=256
+                    width=512
                 ).images[0]
 
             # Fixed filename to include the split so they don't overwrite each other
