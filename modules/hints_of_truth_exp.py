@@ -211,6 +211,7 @@ def main():
                 continue
 
         # csv_file.close()
+        csv_file['saved_sd_image_path'] = saved_flux_image_path
         csv_file.to_csv(csv_file_path, index=False)
 
 
