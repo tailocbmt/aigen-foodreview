@@ -175,7 +175,7 @@ def main():
                 image_result = pipe(
                     prompt=original_text,
                     num_inference_steps=5,
-                    guidance_scale=4,
+                    guidance_scale=1,
                     height=512,
                     width=512
                 ).images[0]
