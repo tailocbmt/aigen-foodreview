@@ -167,9 +167,7 @@ def main():
         rewritten_description = rewrite_caption(
             tokenizer, qwen_model, description)
 
-        original_text = f"rewritten_description".strip()
-        if original_text.startswith(". "):
-            original_text = original_text[2:]
+        original_text = f"{rewritten_description}".strip()
 
         try:
             # 1. Generate Image using FLUX.1-schnell
