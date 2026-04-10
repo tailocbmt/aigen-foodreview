@@ -2,37 +2,18 @@ import os
 import pandas as pd
 import torch
 import gc
-from diffusers import FluxPipeline, FluxTransformer2DModel, GGUFQuantizationConfig, StableDiffusion3Pipeline, SD3Transformer2DModel, GGUFQuantizationConfig
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from larimar_base.model_loader import initialize_image_pipeline, initialize_text_model
 from PIL import Image
 from tqdm import tqdm
 
 # --- Configuration ---
-MODEL_NAME = "sd"
+TEXT_MODEL_NAME = "qwen"
+IMAGE_MODEL_NAME = "flux"
 OUTPUT_DIR = f"evons_data"
-IMAGE_OUTPUT_DIR = f"evons_qwen_{MODEL_NAME}"
+IMAGE_OUTPUT_DIR = f"evons_qwen_{IMAGE_MODEL_NAME}"
 CSV_OUTPUT_NAME = "evons_exp.csv"
-IMAGE_MODEL_ID = "https://huggingface.co/city96/stable-diffusion-3.5-large-turbo-gguf/blob/main/sd3.5_large_turbo-Q8_0.gguf"
-OLLAMA_MODEL = "llava:7b"  # Added Llava model configuration
-
-# Local Qwen model for caption rewriting
-QWEN_MODEL_ID = "Qwen/Qwen2.5-1.5B-Instruct"
 
 os.makedirs(f"{OUTPUT_DIR}/{IMAGE_OUTPUT_DIR}", exist_ok=True)
-
-
-def initialize_qwen_model():
-    """Initializes a local Qwen model for caption rewriting."""
-    print("Loading Qwen model locally...")
-
-    tokenizer = AutoTokenizer.from_pretrained(QWEN_MODEL_ID)
-    model = AutoModelForCausalLM.from_pretrained(
-        QWEN_MODEL_ID,
-        torch_dtype=torch.bfloat16,
-        device_map="auto",
-    )
-
-    return tokenizer, model
 
 
 def rewrite_caption(tokenizer, model, original_text):
@@ -77,67 +58,12 @@ def rewrite_caption(tokenizer, model, original_text):
     return rewritten
 
 
-def initialize_sd_models():
-    """Initializes the SD3.5 Turbo pipeline using the Q8_0 GGUF model."""
-    print("Loading the SD3.5 Large Turbo GGUF transformer...")
-
-    # 1. Load the transformer using the SD3-specific single file loader
-    transformer = SD3Transformer2DModel.from_single_file(
-        IMAGE_MODEL_ID,
-        quantization_config=GGUFQuantizationConfig(
-            compute_dtype=torch.bfloat16),
-        torch_dtype=torch.bfloat16,
-    )
-
-    print("Loading the rest of the SD3.5 pipeline...")
-
-    # 2. Load the pipeline using the SD3 base model, passing in our custom GGUF transformer
-    pipe = StableDiffusion3Pipeline.from_pretrained(
-        "stabilityai/stable-diffusion-3.5-large-turbo",
-        transformer=transformer,
-        torch_dtype=torch.bfloat16
-    )
-
-    # Move directly to the RTX 3090's VRAM
-    print("Moving model to GPU...")
-    pipe.to("cuda")
-
-    return pipe
-
-
-def initialize_flux_models():
-    """Initializes the FLUX pipeline using the Q8_0 GGUF model."""
-    print("Loading the 12.7GB GGUF transformer...")
-
-    transformer = FluxTransformer2DModel.from_single_file(
-        IMAGE_MODEL_ID,
-        quantization_config=GGUFQuantizationConfig(
-            compute_dtype=torch.bfloat16
-        ),
-        torch_dtype=torch.bfloat16,
-    )
-
-    print("Loading the rest of the FLUX pipeline...")
-
-    pipe = FluxPipeline.from_pretrained(
-        "black-forest-labs/FLUX.1-schnell",
-        transformer=transformer,
-        torch_dtype=torch.bfloat16,
-    )
-
-    pipe.to("cuda")
-    return pipe
-
-
 def main():
-    tokenizer, qwen_model = initialize_qwen_model()
-    if MODEL_NAME == "sd":
-        pipe = initialize_sd_models()
-    else:
-        pipe = initialize_flux_models()
+    # tokenizer, qwen_model = initialize_text_model(MODEL_NAME=TEXT_MODEL_NAME)
+    pipe = initialize_image_pipeline(MODEL_NAME=IMAGE_MODEL_NAME)
 
     print("\nLoading dataset 'michiel/hints_of_truth'...")
-    input_csv_path = os.path.join(OUTPUT_DIR, f"evons.csv")
+    input_csv_path = os.path.join(OUTPUT_DIR, f"evons_exp.csv")
     csv_file_path = os.path.join(
         OUTPUT_DIR, CSV_OUTPUT_NAME
     )
@@ -160,12 +86,14 @@ def main():
             row['description']) else ''
 
         # 1. Rewrite title with local Qwen
-        rewritten_title = rewrite_caption(
-            tokenizer, qwen_model, title)
+        # rewritten_title = rewrite_caption(
+        #     tokenizer, qwen_model, title)
+        rewritten_title = row['qwen_rewritten_title']
 
         # 2. Rewrite description with local Qwen
-        rewritten_description = rewrite_caption(
-            tokenizer, qwen_model, description)
+        # rewritten_description = rewrite_caption(
+        #     tokenizer, qwen_model, description)
+        rewritten_description = row['qwen_rewritten_description']
 
         original_text = f"{rewritten_description}".strip()
 
@@ -213,9 +141,9 @@ def main():
             gc.collect()
             continue
 
-    df["qwen_rewritten_title"] = titles
-    df["qwen_rewritten_description"] = descriptions
-    df["fake_img_paths"] = saved_image_paths
+    # df["qwen_rewritten_title"] = titles
+    # df["qwen_rewritten_description"] = descriptions
+    df[f"{IMAGE_MODEL_NAME}_img_path"] = saved_image_paths
     df.to_csv(csv_file_path, index=False)
 
 
