@@ -2,14 +2,15 @@ import torch
 import math
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from diffusers import (
+    GGUFQuantizationConfig,
     StableDiffusion3Pipeline,
     FluxPipeline,
     DiffusionPipeline,
     FlowMatchEulerDiscreteScheduler,
     ZImagePipeline,
+    FluxTransformer2DModel,
+    SD3Transformer2DModel
 )
-from diffusers.models import SD3Transformer2DModel, FluxTransformer2DModel
-from diffusers.quantizers import GGUFQuantizationConfig
 
 QWEN_MODEL_ID = "Qwen/Qwen2.5-1.5B-Instruct"
 LLAMA_MODEL_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
