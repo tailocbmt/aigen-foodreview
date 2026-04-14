@@ -179,5 +179,9 @@ def initialize_image_pipeline(MODEL_NAME):
         return initialize_sd_models()
     elif MODEL_NAME == "flux":
         return initialize_flux_models()
+    elif MODEL_NAME == "z_image":
+        return initialize_zimage_pipeline()
+    elif MODEL_NAME == "qwen_image":
+        return initialize_qwen_image_pipeline()
     else:
         raise ValueError(f"Unsupported MODEL_NAME: {MODEL_NAME}")

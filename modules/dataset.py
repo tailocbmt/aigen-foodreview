@@ -1,3 +1,7 @@
+from PIL import Image, UnidentifiedImageError
+from typing import List, Tuple, Dict, Any, Optional
+from dataclasses import dataclass, field
+import random
 from copy import deepcopy
 from pathlib import Path
 from typing import Dict, Optional
@@ -8,6 +12,56 @@ from datasets import load_dataset
 import pandas as pd
 import os
 from PIL import Image
+
+# ── Change 1: Use a dataclass for config instead of sprawling __init__ args ──
+
+
+@dataclass
+class DatasetConfig:
+    file: str
+    real_image_dir: str
+    fake_image_dir: str
+    max_length: int
+    fake_text_columns: List[str] = field(default_factory=lambda: [
+        "qwen_rewritten_title",
+        "llama_rewritten_title",
+        "mistral_rewritten_title",
+    ])
+    fake_image_columns: List[str] = field(default_factory=lambda: [
+        "sd_img_path",
+        "flux_img_path",
+        "z_img_path",
+        "qwen_img_path",
+    ])
+    mode: str = "train"
+    return_combo_name: bool = False
+
+    def __post_init__(self):
+        if self.mode not in ("train", "val", "test"):
+            raise ValueError(
+                f"mode must be 'train', 'val', or 'test', got '{self.mode}'")
+
+
+# ── Change 2: Named combo tuple instead of bare ("real","real") strings ──
+@dataclass(frozen=True)
+class Combo:
+    text_mode: str   # "real" | "fake"
+    image_mode: str  # "real" | "fake"
+
+
+_COMBOS = [
+    Combo("real", "real"),
+    Combo("fake", "real"),
+    Combo("real", "fake"),
+    Combo("fake", "fake"),
+]
+
+_COMBO_LABELS: Dict[Tuple[int, int], str] = {
+    (0, 0): "real_text_real_img",
+    (1, 0): "fake_text_real_img",
+    (0, 1): "real_text_fake_img",
+    (1, 1): "fake_text_fake_img",
+}
 
 
 class TextDataset(Dataset):
@@ -247,3 +301,177 @@ class EvonsMultimodalDataset(Dataset):
         inputs = self.processor(text=text, images=images, return_tensors="pt",
                                 max_length=self.max_length, truncation=True, padding="max_length")
         return inputs
+
+
+class EvonsOnlineMultimodalDataset(Dataset):
+    def __init__(self, cfg: DatasetConfig, processor):
+        super().__init__()
+        self.cfg = cfg
+        self.processor = processor
+
+        # ── Change 3: Validate file exists early, not at first __getitem__ ──
+        csv_path = Path(cfg.file)
+        if not csv_path.exists():
+            raise FileNotFoundError(f"Dataset CSV not found: {csv_path}")
+
+        self.data = pd.read_csv(csv_path).reset_index(drop=True)
+
+        # ── Change 4: Validate required columns at init time ──
+        self._validate_columns()
+
+    # ── Change 5: Column validation extracted to its own method ──
+    def _validate_columns(self) -> None:
+        required = {"media_source"}
+        text_real = {"real_title", "real_text"}
+        image_real = {"real_img_path", "image_fn"}
+
+        missing = required - set(self.data.columns)
+        if missing:
+            raise ValueError(f"Missing required columns: {missing}")
+
+        if not (text_real & set(self.data.columns)):
+            raise ValueError(f"Need at least one of {text_real} in CSV.")
+        if not (image_real & set(self.data.columns)):
+            raise ValueError(f"Need at least one of {image_real} in CSV.")
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+    def __getitem__(self, index: int) -> Dict[str, Any]:
+        row = self.data.iloc[index]
+
+        fake_text_pool = self._get_fake_text_pool(row)
+        fake_image_pool = self._get_fake_image_pool(row)
+
+        combo = self._sample_combo(index)
+
+        text, text_generator, text_label = self._sample_text(
+            row, fake_text_pool, combo.text_mode, index
+        )
+        image_path, image_generator, image_label = self._sample_image(
+            row, fake_image_pool, combo.image_mode, index
+        )
+
+        # ── Change 6: Catch corrupt images gracefully instead of crashing ──
+        try:
+            image = Image.open(image_path).convert("RGB")
+        except (FileNotFoundError, UnidentifiedImageError, OSError) as e:
+            raise RuntimeError(
+                f"Failed to load image at index {index}: {image_path}"
+            ) from e
+
+        inputs = self.tokenize(text=[text], images=[image])
+        inputs = {k: v.squeeze(0) for k, v in inputs.items()}
+
+        label = torch.tensor([text_label, image_label], dtype=torch.float)
+
+        output: Dict[str, Any] = {"inputs": inputs, "label": label}
+
+        if self.cfg.return_combo_name:
+            output.update({
+                "combo_label": _COMBO_LABELS[(text_label, image_label)],
+                "text_generator": text_generator,
+                "image_generator": image_generator,
+                "source_index": index,
+            })
+
+        return output
+
+    def _sample_combo(self, index: int) -> Combo:
+        if self.cfg.mode == "train":
+            return random.choice(_COMBOS)
+        # Deterministic for val/test — covers all 4 combos evenly
+        return _COMBOS[index % len(_COMBOS)]
+
+    def _get_fake_text_pool(self, row: pd.Series) -> List[Tuple[str, str]]:
+        pool = [
+            (col, str(row[col]).strip())
+            for col in self.cfg.fake_text_columns
+            if col in row.index and pd.notna(row[col]) and str(row[col]).strip()
+        ]
+        if not pool:
+            raise ValueError(
+                f"No valid fake text found. Checked columns: {self.cfg.fake_text_columns}"
+            )
+        return pool
+
+    def _get_fake_image_pool(self, row: pd.Series) -> List[Tuple[str, str]]:
+        pool = [
+            (col, str(row[col]).strip())
+            for col in self.cfg.fake_image_columns
+            if col in row.index and pd.notna(row[col]) and str(row[col]).strip()
+        ]
+        if not pool:
+            raise ValueError(
+                f"No valid fake image found. Checked columns: {self.cfg.fake_image_columns}"
+            )
+        return pool
+
+    def _sample_text(
+        self,
+        row: pd.Series,
+        fake_text_pool: List[Tuple[str, str]],
+        mode: str,
+        index: int,
+    ) -> Tuple[str, str, int]:
+        if mode == "real":
+            for col in ("real_title", "real_text"):
+                if col in row.index and pd.notna(row[col]):
+                    return str(row[col]), "real", 0
+            raise ValueError(
+                "No real text column found. Expected 'real_title' or 'real_text'.")
+
+        # ── Change 7: DRY — single branch for fake sampling (train vs val) ──
+        pool_index = (
+            random.randrange(len(fake_text_pool))
+            if self.cfg.mode == "train"
+            else index % len(fake_text_pool)
+        )
+        gen_name, text = fake_text_pool[pool_index]
+        return text, gen_name, 1
+
+    def _sample_image(
+        self,
+        row: pd.Series,
+        fake_image_pool: List[Tuple[str, str]],
+        mode: str,
+        index: int,
+    ) -> Tuple[str, str, int]:
+        if mode == "real":
+            media_source = (
+                str(row["media_source"]).strip()
+                if pd.notna(row.get("media_source", float("nan")))
+                else ""
+            )
+            for col in ("real_img_path", "image_fn"):
+                if col in row.index and pd.notna(row[col]):
+                    image_name = str(row[col])
+                    # ── Change 8: Use pathlib.Path for cross-platform safety ──
+                    image_path = (
+                        Path(self.cfg.real_image_dir) /
+                        media_source / image_name
+                        if media_source
+                        else Path(self.cfg.real_image_dir) / image_name
+                    )
+                    return str(image_path), "real", 0
+            raise ValueError(
+                "No real image column found. Expected 'real_img_path' or 'image_fn'.")
+
+        pool_index = (
+            random.randrange(len(fake_image_pool))
+            if self.cfg.mode == "train"
+            else index % len(fake_image_pool)
+        )
+        gen_name, image_name = fake_image_pool[pool_index]
+        image_path = Path(self.cfg.fake_image_dir) / image_name
+        return str(image_path), gen_name, 1
+
+    def tokenize(self, text: List[str], images: List[Image.Image]) -> Dict[str, torch.Tensor]:
+        return self.processor(
+            text=text,
+            images=images,
+            return_tensors="pt",
+            max_length=self.cfg.max_length,
+            truncation=True,
+            padding="max_length",
+        )
