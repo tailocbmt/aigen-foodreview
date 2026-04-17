@@ -138,12 +138,12 @@ def initialize_qwen_image_pipeline():
         "Qwen/Qwen-Image",
         cache_dir="/media/t2-503-3090-3/data112/hf_cache",
         scheduler=scheduler,
-        torch_dtype=torch.float16,
+        torch_dtype=torch.bfloat16,
     ).to("cuda")
 
     pipe.load_lora_weights(
         "lightx2v/Qwen-Image-Lightning",
-        weight_name="Qwen-Image-Edit-Lightning-8steps-V1.0-bf16.safetensors",
+        weight_name="Qwen-Image-Lightning-8steps-V1.0.safetensors",
     )
 
     return pipe
