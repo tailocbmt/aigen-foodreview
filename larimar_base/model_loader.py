@@ -5,7 +5,7 @@ from diffusers import (
     GGUFQuantizationConfig,
     StableDiffusion3Pipeline,
     FluxPipeline,
-    DiffusionPipeline,
+    QwenImageTransformer2DModel,
     FlowMatchEulerDiscreteScheduler,
     QwenImagePipeline,
     ZImagePipeline,
@@ -19,6 +19,7 @@ MISTRAL_MODEL_ID = "mistralai/Mixtral-8x7B-Instruct-v0.1"
 SD_IMAGE_MODEL_ID = "https://huggingface.co/city96/stable-diffusion-3.5-large-turbo-gguf/blob/main/sd3.5_large_turbo-Q8_0.gguf"
 FLUX_IMAGE_MODEL_ID = "https://huggingface.co/city96/FLUX.1-schnell-gguf/blob/main/flux1-schnell-Q8_0.gguf"
 Z_IMAGE_MODEL_ID = "Tongyi-MAI/Z-Image-Turbo"
+QWEN_IMAGE_MODEL_ID = "https://huggingface.co/city96/Qwen-Image-gguf/blob/main/qwen-image-Q8_0.gguf"
 
 
 def initialize_llama3_model(MODEL_ID: str = LLAMA_MODEL_ID):
@@ -113,7 +114,7 @@ def initialize_flux_models(IMAGE_MODEL_ID: str = FLUX_IMAGE_MODEL_ID):
     return pipe
 
 
-def initialize_qwen_image_pipeline():
+def initialize_qwen_image_pipeline(IMAGE_MODEL_ID: str = QWEN_IMAGE_MODEL_ID):
     """Initializes Qwen Image Lightning pipeline."""
 
     scheduler_config = {
@@ -133,7 +134,31 @@ def initialize_qwen_image_pipeline():
         "use_karras_sigmas": False,
     }
 
-    scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
+    """Initializes Qwen-Image using the GGUF transformer."""
+
+    print("Loading the Qwen-Image GGUF transformer...")
+
+    transformer = QwenImageTransformer2DModel.from_single_file(
+        IMAGE_MODEL_ID,
+        quantization_config=GGUFQuantizationConfig(
+            compute_dtype=torch.bfloat16
+        ),
+        torch_dtype=torch.bfloat16,
+        config="Qwen/Qwen-Image",
+        subfolder="transformer",
+    )
+
+    print("Loading the rest of the Qwen-Image pipeline...")
+
+    pipe = QwenImagePipeline.from_pretrained(
+        "Qwen/Qwen-Image",
+        transformer=transformer,
+        torch_dtype=torch.bfloat16,
+        cache_dir="/media/t2-503-3090-3/data112/hf_cache",
+    )
+
+    pipe.to("cuda")
+    # scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
 
     # pipe = DiffusionPipeline.from_pretrained(
     #     "Qwen/Qwen-Image",
@@ -141,8 +166,8 @@ def initialize_qwen_image_pipeline():
     #     scheduler=scheduler,
     #     torch_dtype=torch.float16,
     # )
-    pipe = QwenImagePipeline.from_pretrained(
-        "Qwen/Qwen-Image-2512", torch_dtype=torch.bfloat16).to("cuda")
+    # pipe = QwenImagePipeline.from_pretrained(
+    #     "Qwen/Qwen-Image-2512", torch_dtype=torch.bfloat16).to("cuda")
 
     # pipe.load_lora_weights(
     #     "lightx2v/Qwen-Image-Lightning",
