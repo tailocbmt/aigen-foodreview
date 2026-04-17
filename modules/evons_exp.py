@@ -104,7 +104,7 @@ def main():
                     prompt=original_text,
                     num_inference_steps=4,
                     strength=0.5,
-                    guidance_scale=1.0,
+                    guidance_scale=0.0,
                     # num_inference_steps=9, guidance_scale=0.0, z_image
                     # num_inference_steps=4, guidance_scale=1, normal
                     # guidance_scale=0.0,
