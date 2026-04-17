@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 # --- Configuration ---
 TEXT_MODEL_NAME = "qwen"
-IMAGE_MODEL_NAME = "qwen_image"
+IMAGE_MODEL_NAME = "sdxl"
 OUTPUT_DIR = f"evons_data"
 IMAGE_OUTPUT_DIR = f"evons_qwen_{IMAGE_MODEL_NAME}"
 CSV_OUTPUT_NAME = "evons_exp.csv"
@@ -102,9 +102,9 @@ def main():
             with torch.inference_mode():
                 image_result = pipe(
                     prompt=original_text,
-                    num_inference_steps=8,
-                    negative_prompt=" ",
-                    true_cfg_scale=4.0,
+                    num_inference_steps=2,
+                    strength=0.5,
+                    guidance_scale=0.0,
                     # num_inference_steps=9, guidance_scale=0.0, z_image
                     # num_inference_steps=4, guidance_scale=1, normal
                     # guidance_scale=0.0,

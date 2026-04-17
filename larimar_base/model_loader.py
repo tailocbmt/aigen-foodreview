@@ -6,6 +6,7 @@ from transformers import Qwen2_5_VLForConditionalGeneration
 
 from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
 from diffusers import (
+    AutoPipelineForText2Image,
     GGUFQuantizationConfig,
     StableDiffusion3Pipeline,
     FluxPipeline,
@@ -187,6 +188,16 @@ def initialize_zimage_pipeline(IMAGE_MODEL_ID: str = Z_IMAGE_MODEL_ID):
     return pipe
 
 
+def initialize_sdxl_pipeline(IMAGE_MODEL_ID: str = Z_IMAGE_MODEL_ID):
+    """Initializes SDXL Turbo pipeline."""
+
+    pipe = AutoPipelineForText2Image.from_pretrained(
+        "stabilityai/sdxl-turbo", torch_dtype=torch.float16, variant="fp16")
+    pipe.to("cuda")
+
+    return pipe
+
+
 def initialize_text_model(MODEL_NAME):
     if MODEL_NAME == "qwen":
         return initialize_qwen_model()
@@ -209,5 +220,7 @@ def initialize_image_pipeline(MODEL_NAME):
         return initialize_zimage_pipeline()
     elif MODEL_NAME == "qwen_image":
         return initialize_qwen_image_pipeline()
+    elif MODEL_NAME == "sdxl":
+        return initialize_sdxl_pipeline()
     else:
         raise ValueError(f"Unsupported MODEL_NAME: {MODEL_NAME}")
