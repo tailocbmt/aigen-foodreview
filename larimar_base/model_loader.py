@@ -158,6 +158,13 @@ def initialize_qwen_image_pipeline(IMAGE_MODEL_ID: str = QWEN_IMAGE_MODEL_ID):
     )
 
     pipe.to("cuda")
+    pipe.enable_attention_slicing()
+
+    if hasattr(pipe, "vae") and pipe.vae is not None:
+        if hasattr(pipe.vae, "enable_slicing"):
+            pipe.vae.enable_slicing()
+        if hasattr(pipe.vae, "enable_tiling"):
+            pipe.vae.enable_tiling()
     # scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
 
     # pipe = DiffusionPipeline.from_pretrained(
