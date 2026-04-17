@@ -104,7 +104,7 @@ def main():
                     prompt=original_text,
                     num_inference_steps=8,
                     negative_prompt=" ",
-                    true_cfg_scale=1.0,
+                    true_cfg_scale=4.0,
                     # num_inference_steps=9, guidance_scale=0.0, z_image
                     # num_inference_steps=4, guidance_scale=1, normal
                     # guidance_scale=0.0,

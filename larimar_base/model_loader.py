@@ -7,6 +7,7 @@ from diffusers import (
     FluxPipeline,
     DiffusionPipeline,
     FlowMatchEulerDiscreteScheduler,
+    QwenImagePipeline,
     ZImagePipeline,
     FluxTransformer2DModel,
     SD3Transformer2DModel
@@ -134,19 +135,21 @@ def initialize_qwen_image_pipeline():
 
     scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
 
-    pipe = DiffusionPipeline.from_pretrained(
-        "Qwen/Qwen-Image",
-        cache_dir="/media/t2-503-3090-3/data112/hf_cache",
-        scheduler=scheduler,
-        torch_dtype=torch.float16,
-    )
+    # pipe = DiffusionPipeline.from_pretrained(
+    #     "Qwen/Qwen-Image",
+    #     cache_dir="/media/t2-503-3090-3/data112/hf_cache",
+    #     scheduler=scheduler,
+    #     torch_dtype=torch.float16,
+    # )
+    pipe = QwenImagePipeline.from_pretrained(
+        "Qwen/Qwen-Image-2512", torch_dtype=torch.bfloat16).to("cuda")
 
-    pipe.load_lora_weights(
-        "lightx2v/Qwen-Image-Lightning",
-        weight_name="Qwen-Image-Lightning-8steps-V1.0.safetensors",
-    )
+    # pipe.load_lora_weights(
+    #     "lightx2v/Qwen-Image-Lightning",
+    #     weight_name="Qwen-Image-Lightning-8steps-V1.0.safetensors",
+    # )
 
-    pipe.to("cuda")
+    # pipe.to("cuda")
     return pipe
 
 
