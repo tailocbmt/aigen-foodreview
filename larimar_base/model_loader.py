@@ -132,6 +132,8 @@ def initialize_qwen_image_pipeline(IMAGE_MODEL_ID: str = QWEN_IMAGE_MODEL_ID):
         quantization_config=transformer_quant_config,
         torch_dtype=torch.bfloat16,
     )
+    transformer = transformer.to("cpu")
+
     # Quantize the text encoder
     text_encoder_quant_config = TransformersBitsAndBytesConfig(
         load_in_4bit=True,
@@ -160,6 +162,9 @@ def initialize_qwen_image_pipeline(IMAGE_MODEL_ID: str = QWEN_IMAGE_MODEL_ID):
         "lightx2v/Qwen-Image-Lightning",
         weight_name="Qwen-Image-Lightning-8steps-V1.1.safetensors",
     )
+
+    pipe.enable_model_cpu_offload()
+    pipe.enable_attention_slicing()
 
     if hasattr(pipe, "vae") and pipe.vae is not None:
         if hasattr(pipe.vae, "enable_slicing"):
