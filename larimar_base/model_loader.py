@@ -1,12 +1,15 @@
 import torch
 import math
 from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import BitsAndBytesConfig as TransformersBitsAndBytesConfig
+from transformers import Qwen2_5_VLForConditionalGeneration
+
+from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
 from diffusers import (
     GGUFQuantizationConfig,
     StableDiffusion3Pipeline,
     FluxPipeline,
     QwenImageTransformer2DModel,
-    FlowMatchEulerDiscreteScheduler,
     QwenImagePipeline,
     ZImagePipeline,
     FluxTransformer2DModel,
@@ -117,71 +120,52 @@ def initialize_flux_models(IMAGE_MODEL_ID: str = FLUX_IMAGE_MODEL_ID):
 def initialize_qwen_image_pipeline(IMAGE_MODEL_ID: str = QWEN_IMAGE_MODEL_ID):
     """Initializes Qwen Image Lightning pipeline."""
 
-    scheduler_config = {
-        "base_image_seq_len": 256,
-        "base_shift": math.log(3),
-        "invert_sigmas": False,
-        "max_image_seq_len": 8192,
-        "max_shift": math.log(3),
-        "num_train_timesteps": 1000,
-        "shift": 1.0,
-        "shift_terminal": None,
-        "stochastic_sampling": False,
-        "time_shift_type": "exponential",
-        "use_beta_sigmas": False,
-        "use_dynamic_shifting": True,
-        "use_exponential_sigmas": False,
-        "use_karras_sigmas": False,
-    }
-
-    """Initializes Qwen-Image using the GGUF transformer."""
-
-    print("Loading the Qwen-Image GGUF transformer...")
-
-    transformer = QwenImageTransformer2DModel.from_single_file(
-        IMAGE_MODEL_ID,
-        quantization_config=GGUFQuantizationConfig(
-            compute_dtype=torch.bfloat16
-        ),
-        torch_dtype=torch.bfloat16,
-        config="Qwen/Qwen-Image",
+    transformer_quant_config = DiffusersBitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.bfloat16,
+        llm_int8_skip_modules=["transformer_blocks.0.img_mod"],
+    )
+    transformer = QwenImageTransformer2DModel.from_pretrained(
+        "Qwen/Qwen-Image",
         subfolder="transformer",
+        quantization_config=transformer_quant_config,
+        torch_dtype=torch.bfloat16,
+    )
+    # Quantize the text encoder
+    text_encoder_quant_config = TransformersBitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.bfloat16,
     )
 
-    print("Loading the rest of the Qwen-Image pipeline...")
-
+    text_encoder = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        "Qwen/Qwen-Image",
+        subfolder="text_encoder",
+        quantization_config=text_encoder_quant_config,
+        torch_dtype=torch.bfloat16,
+    )
+    text_encoder = text_encoder.to("cpu")
+    # Build the generation pipeline
     pipe = QwenImagePipeline.from_pretrained(
         "Qwen/Qwen-Image",
         transformer=transformer,
+        text_encoder=text_encoder,
         torch_dtype=torch.bfloat16,
         cache_dir="/media/t2-503-3090-3/data112/hf_cache",
     )
 
-    pipe.to("cuda")
-    pipe.enable_attention_slicing()
+    # Optional Lightning LoRA for faster generation
+    pipe.load_lora_weights(
+        "lightx2v/Qwen-Image-Lightning",
+        weight_name="Qwen-Image-Lightning-8steps-V1.1.safetensors",
+    )
 
     if hasattr(pipe, "vae") and pipe.vae is not None:
         if hasattr(pipe.vae, "enable_slicing"):
             pipe.vae.enable_slicing()
         if hasattr(pipe.vae, "enable_tiling"):
             pipe.vae.enable_tiling()
-    # scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
-
-    # pipe = DiffusionPipeline.from_pretrained(
-    #     "Qwen/Qwen-Image",
-    #     cache_dir="/media/t2-503-3090-3/data112/hf_cache",
-    #     scheduler=scheduler,
-    #     torch_dtype=torch.float16,
-    # )
-    # pipe = QwenImagePipeline.from_pretrained(
-    #     "Qwen/Qwen-Image-2512", torch_dtype=torch.bfloat16).to("cuda")
-
-    # pipe.load_lora_weights(
-    #     "lightx2v/Qwen-Image-Lightning",
-    #     weight_name="Qwen-Image-Lightning-8steps-V1.0.safetensors",
-    # )
-
-    # pipe.to("cuda")
     return pipe
 
 
