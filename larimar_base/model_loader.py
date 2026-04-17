@@ -136,6 +136,7 @@ def initialize_qwen_image_pipeline():
 
     pipe = DiffusionPipeline.from_pretrained(
         "Qwen/Qwen-Image",
+        cache_dir="/media/t2-503-3090-3/data112/hf_cache",
         scheduler=scheduler,
         torch_dtype=torch.bfloat16,
     ).to("cuda")
