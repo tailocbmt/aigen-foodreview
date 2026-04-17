@@ -143,7 +143,7 @@ def initialize_qwen_image_pipeline():
 
     pipe.load_lora_weights(
         "lightx2v/Qwen-Image-Lightning",
-        weight_name="Qwen-Image-Lightning-8steps-V1.0.safetensors",
+        weight_name="Qwen-Image-Edit-Lightning-8steps-V1.0-bf16.safetensors",
     )
 
     return pipe
