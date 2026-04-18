@@ -132,7 +132,7 @@ def main():
             )
 
             # Free memory
-            del image_result
+            # del image_result
 
             # Do cleanup occasionally, not every image
             if i % 50 == 0:
