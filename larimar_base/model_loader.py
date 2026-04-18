@@ -21,7 +21,7 @@ from diffusers import (
 
 QWEN_MODEL_ID = "Qwen/Qwen2.5-1.5B-Instruct"
 LLAMA_MODEL_ID = "meta-llama/Llama-3.2-3B-Instruct"
-MISTRAL_MODEL_ID = "mistralai/Mixtral-8x7B-Instruct-v0.1"
+MISTRAL_MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.1"
 SD_IMAGE_MODEL_ID = "https://huggingface.co/city96/stable-diffusion-3.5-large-turbo-gguf/blob/main/sd3.5_large_turbo-Q8_0.gguf"
 FLUX_IMAGE_MODEL_ID = "https://huggingface.co/city96/FLUX.1-schnell-gguf/blob/main/flux1-schnell-Q8_0.gguf"
 Z_IMAGE_MODEL_ID = "Tongyi-MAI/Z-Image-Turbo"
@@ -46,15 +46,11 @@ def initialize_mixtral_model(MODEL_ID: str = MISTRAL_MODEL_ID):
     print("Loading Mixtral 8x7B...")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    offload_dir = "./offload_mixtral"
-    os.makedirs(offload_dir, exist_ok=True)
 
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
         torch_dtype=torch.bfloat16,
-        device_map="auto",
-        offload_folder=offload_dir,
-        offload_state_dict=True,
+        device_map="auto"
     )
 
     return tokenizer, model

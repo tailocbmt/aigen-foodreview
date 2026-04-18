@@ -7,7 +7,7 @@ from PIL import Image
 from tqdm import tqdm
 
 # --- Configuration ---
-TEXT_MODEL_NAME = "llama3"
+TEXT_MODEL_NAME = "mixtral"
 IMAGE_MODEL_NAME = "sdxl"
 OUTPUT_DIR = f"evons_data"
 IMAGE_OUTPUT_DIR = f"evons_qwen_{IMAGE_MODEL_NAME}"
@@ -121,6 +121,7 @@ def main():
             # image_result.save(image_relative_path)
 
             # 3. Write all data to CSV
+            print(rewritten_title)
             titles.append(
                 rewritten_title
             )
