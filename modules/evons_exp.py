@@ -16,7 +16,7 @@ CSV_OUTPUT_NAME = "evons_exp.csv"
 os.makedirs(f"{OUTPUT_DIR}/{IMAGE_OUTPUT_DIR}", exist_ok=True)
 
 
-def rewrite_caption(tokenizer, model, original_text):
+def rewrite_caption(tokenizer, model, original_text, mode: str = "news title"):
     """Rewrites a caption to be more vivid and image-generation friendly."""
     if not original_text or not original_text.strip():
         return original_text
@@ -25,7 +25,7 @@ def rewrite_caption(tokenizer, model, original_text):
         {
             "role": "system",
             "content": (
-                "Rewrite the caption. Preserve the original meaning, key entities, and scene. Do not add facts not implied by the original text. Return only the rewritten caption."
+                f"Rewrite the {mode}. Preserve the original meaning, key entities, and scene. Do not add facts not implied by the original text. Return only the rewritten {mode}."
             ),
         },
         {
@@ -87,12 +87,12 @@ def main():
 
         # 1. Rewrite title with local Qwen
         rewritten_title = rewrite_caption(
-            tokenizer, qwen_model, title)
+            tokenizer, qwen_model, title, "news title")
         # rewritten_title = row['qwen_rewritten_title']
 
         # 2. Rewrite description with local Qwen
         rewritten_description = rewrite_caption(
-            tokenizer, qwen_model, description)
+            tokenizer, qwen_model, description, "news description")
         # rewritten_description = row['qwen_rewritten_description']
 
         original_text = f"{rewritten_description}".strip()
