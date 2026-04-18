@@ -245,7 +245,7 @@ def create_multimodal_splits(input_csv, output_dir=".", seed=42):
         "sd_img_path",
         "flux_img_path",
         "z_img_path",
-        "qwen_img_path",
+        "sdxl_img_path",
         "is_fake",
     ]
 
@@ -279,9 +279,9 @@ def create_multimodal_splits(input_csv, output_dir=".", seed=42):
     )
 
     # save
-    train_path = f"{output_dir}/train_multimodal.csv"
-    val_path = f"{output_dir}/val_multimodal.csv"
-    test_path = f"{output_dir}/test_multimodal.csv"
+    train_path = f"{output_dir}/train_multilabel.csv"
+    val_path = f"{output_dir}/val_multilabel.csv"
+    test_path = f"{output_dir}/test_multilabel.csv"
 
     train_expanded.to_csv(train_path, index=False)
     val_expanded.to_csv(val_path, index=False)
