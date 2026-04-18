@@ -16,7 +16,7 @@ CSV_OUTPUT_NAME = "evons_exp.csv"
 os.makedirs(f"{OUTPUT_DIR}/{IMAGE_OUTPUT_DIR}", exist_ok=True)
 
 
-def rewrite_caption(tokenizer, model, original_text, mode: str = "news title"):
+def rewrite_caption(tokenizer, model, original_text, mode: str = "title"):
     """Rewrites a caption to be more vivid and image-generation friendly."""
     if not original_text or not original_text.strip():
         return original_text
@@ -30,7 +30,7 @@ def rewrite_caption(tokenizer, model, original_text, mode: str = "news title"):
         },
         {
             "role": "user",
-            "content": f"Original caption: {original_text}",
+            "content": f"Original {mode}: {original_text}",
         },
     ]
 
