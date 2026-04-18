@@ -1,3 +1,5 @@
+import os
+
 import torch
 import math
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -44,11 +46,15 @@ def initialize_mixtral_model(MODEL_ID: str = MISTRAL_MODEL_ID):
     print("Loading Mixtral 8x7B...")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+    offload_dir = "./offload_mixtral"
+    os.makedirs(offload_dir, exist_ok=True)
 
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
         torch_dtype=torch.bfloat16,
         device_map="auto",
+        offload_folder=offload_dir,
+        offload_state_dict=True,
     )
 
     return tokenizer, model

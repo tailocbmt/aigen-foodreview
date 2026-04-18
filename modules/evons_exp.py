@@ -60,7 +60,7 @@ def rewrite_caption(tokenizer, model, original_text):
 
 def main():
     tokenizer, qwen_model = initialize_text_model(MODEL_NAME=TEXT_MODEL_NAME)
-    pipe = initialize_image_pipeline(MODEL_NAME=IMAGE_MODEL_NAME)
+    # pipe = initialize_image_pipeline(MODEL_NAME=IMAGE_MODEL_NAME)
 
     print("\nLoading dataset 'michiel/hints_of_truth'...")
     input_csv_path = os.path.join(OUTPUT_DIR, f"evons_exp.csv")
