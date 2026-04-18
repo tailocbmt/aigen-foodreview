@@ -327,7 +327,7 @@ def create_multimodal_splits(input_csv, output_dir=".", seed=42):
 # =========================================================
 if __name__ == "__main__":
     train_expanded, val_expanded, test_expanded = create_multimodal_splits(
-        input_csv="evons_data/evons.csv",
+        input_csv="evons_data/evons_exp.csv",
         output_dir="evons_data",
         seed=42
     )

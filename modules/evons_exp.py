@@ -7,7 +7,7 @@ from PIL import Image
 from tqdm import tqdm
 
 # --- Configuration ---
-TEXT_MODEL_NAME = "qwen"
+TEXT_MODEL_NAME = "llama3"
 IMAGE_MODEL_NAME = "sdxl"
 OUTPUT_DIR = f"evons_data"
 IMAGE_OUTPUT_DIR = f"evons_qwen_{IMAGE_MODEL_NAME}"
@@ -59,7 +59,7 @@ def rewrite_caption(tokenizer, model, original_text):
 
 
 def main():
-    # tokenizer, qwen_model = initialize_text_model(MODEL_NAME=TEXT_MODEL_NAME)
+    tokenizer, qwen_model = initialize_text_model(MODEL_NAME=TEXT_MODEL_NAME)
     pipe = initialize_image_pipeline(MODEL_NAME=IMAGE_MODEL_NAME)
 
     print("\nLoading dataset 'michiel/hints_of_truth'...")
@@ -86,31 +86,31 @@ def main():
             row['description']) else ''
 
         # 1. Rewrite title with local Qwen
-        # rewritten_title = rewrite_caption(
-        #     tokenizer, qwen_model, title)
-        rewritten_title = row['qwen_rewritten_title']
+        rewritten_title = rewrite_caption(
+            tokenizer, qwen_model, title)
+        # rewritten_title = row['qwen_rewritten_title']
 
         # 2. Rewrite description with local Qwen
-        # rewritten_description = rewrite_caption(
-        #     tokenizer, qwen_model, description)
-        rewritten_description = row['qwen_rewritten_description']
+        rewritten_description = rewrite_caption(
+            tokenizer, qwen_model, description)
+        # rewritten_description = row['qwen_rewritten_description']
 
         original_text = f"{rewritten_description}".strip()
 
         try:
             # 1. Generate Image using FLUX.1-schnell
-            with torch.inference_mode():
-                image_result = pipe(
-                    prompt=original_text,
-                    num_inference_steps=2,
-                    strength=0.5,
-                    guidance_scale=0.0,
-                    # num_inference_steps=9, guidance_scale=0.0, z_image
-                    # num_inference_steps=4, guidance_scale=1, normal
-                    # guidance_scale=0.0,
-                    height=512,
-                    width=512
-                ).images[0]
+            # with torch.inference_mode():
+            #     image_result = pipe(
+            #         prompt=original_text,
+            #         num_inference_steps=2,
+            #         strength=0.5,
+            #         guidance_scale=0.0,
+            #         # num_inference_steps=9, guidance_scale=0.0, z_image
+            #         # num_inference_steps=4, guidance_scale=1, normal
+            #         # guidance_scale=0.0,
+            #         height=512,
+            #         width=512
+            #     ).images[0]
 
             # Fixed filename to include the split so they don't overwrite each other
             image_filename = f"fake_img_{i:04d}.png"
@@ -118,7 +118,7 @@ def main():
                 OUTPUT_DIR, IMAGE_OUTPUT_DIR, image_filename)
 
             # Save the image to disk FIRST so later steps can read the file
-            image_result.save(image_relative_path)
+            # image_result.save(image_relative_path)
 
             # 3. Write all data to CSV
             titles.append(
@@ -145,9 +145,9 @@ def main():
             gc.collect()
             continue
 
-    # df["qwen_rewritten_title"] = titles
-    # df["qwen_rewritten_description"] = descriptions
-    df[f"{IMAGE_MODEL_NAME}_img_path"] = saved_image_paths
+    df[f"{TEXT_MODEL_NAME}_rewritten_title"] = titles
+    df[f"{TEXT_MODEL_NAME}_rewritten_description"] = descriptions
+    # df[f"{IMAGE_MODEL_NAME}_img_path"] = saved_image_paths
     df.to_csv(csv_file_path, index=False)
 
 
