@@ -20,7 +20,7 @@ from diffusers import (
 )
 
 QWEN_MODEL_ID = "Qwen/Qwen2.5-1.5B-Instruct"
-LLAMA_MODEL_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
+LLAMA_MODEL_ID = "meta-llama/Llama-3.2-3B-Instruct"
 MISTRAL_MODEL_ID = "mistralai/Mixtral-8x7B-Instruct-v0.1"
 SD_IMAGE_MODEL_ID = "https://huggingface.co/city96/stable-diffusion-3.5-large-turbo-gguf/blob/main/sd3.5_large_turbo-Q8_0.gguf"
 FLUX_IMAGE_MODEL_ID = "https://huggingface.co/city96/FLUX.1-schnell-gguf/blob/main/flux1-schnell-Q8_0.gguf"
