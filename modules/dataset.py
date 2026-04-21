@@ -303,6 +303,62 @@ class EvonsMultimodalDataset(Dataset):
         return inputs
 
 
+class EvonsOfflineMultimodalDataset(Dataset):
+    def __init__(self, file, image_dir, processor, max_length):
+        super().__init__()
+        self.data = pd.read_csv(file)
+
+        self.image_dir = image_dir
+        self.processor = processor
+        self.max_length = max_length
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        item = self.data.iloc[index]
+
+        text = self._build_text(item)
+
+        image_rel_path = item["image_path"]
+        image_path = os.path.join(self.image_dir, image_rel_path)
+
+        image = Image.open(image_path).convert("RGB")
+        inputs = self.tokenize(text=[text], images=[image])
+
+        labels = torch.tensor(
+            [
+                int(item["label_text"]),
+                int(item["label_image"]),
+            ],
+            dtype=torch.float
+        )
+
+        return {
+            "inputs": inputs,
+            "labels": labels,
+        }
+
+    def _build_text(self, item):
+        title = "" if pd.isna(item["title"]) else str(item["title"])
+        description = "" if pd.isna(
+            item["description"]) else str(item["description"])
+
+        if title and description:
+            return f"{title} {description}"
+        return title or description
+
+    def tokenize(self, text: list, images: list):
+        return self.processor(
+            text=text,
+            images=images,
+            return_tensors="pt",
+            max_length=self.max_length,
+            truncation=True,
+            padding="max_length",
+        )
+
+
 class EvonsOnlineMultimodalDataset(Dataset):
     def __init__(self, cfg: DatasetConfig, processor):
         super().__init__()
