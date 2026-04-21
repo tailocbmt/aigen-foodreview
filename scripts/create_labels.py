@@ -261,6 +261,7 @@ def create_multimodal_splits(llama3_csv, input_csv, output_dir=".", seed=42):
     df["sdxl_img_path"] = df["sdxl_img_path"].apply(
         lambda x: os.path.join(IMAGE_OUTPUT_DIR.format(IMAGE_MODEL_NAME="sdxl"), x))
     df = df.drop(columns=["Unnamed: 0"])
+    df = df[df["image_fn"] != "mwn5977-t.jpg"]
 
     cols = [
         "qwen_rewritten_title",
@@ -373,8 +374,8 @@ def create_multimodal_splits(llama3_csv, input_csv, output_dir=".", seed=42):
 # =========================================================
 if __name__ == "__main__":
     train_expanded, val_expanded, test_expanded = create_multimodal_splits(
-        llama3_csv="evons_data/evons_exp_llama3.csv",
-        input_csv="evons_data/evons_exp.csv",
-        output_dir="evons_data",
+        llama3_csv="data/evons_exp_llama3.csv",
+        input_csv="data/evons_exp.csv",
+        output_dir="data",
         seed=42
     )
