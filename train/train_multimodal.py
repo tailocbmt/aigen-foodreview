@@ -89,7 +89,7 @@ elif model_name == 'flava':
     processor = FlavaProcessor.from_pretrained("facebook/flava-full")
     model = FLAVADetector(backbone, processor, out_dim=output_dim)
 elif model_name == 'fakenews':
-    model = FakeNewsMultimodal(out_dim=output_dim)
+    model = FakeNewsMultimodal(output_dim=output_dim)
 else:
     pass
 model = model.to(device)
