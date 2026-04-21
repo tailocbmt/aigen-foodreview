@@ -139,7 +139,7 @@ def expand_dataset(
     for source_id, row in df.iterrows():
         real_title = row["title"]
         real_des = row["description"]
-        image_fn = row["image_fn"].str.replace("usas", "usasup", regex=False)
+        image_fn = row["image_fn"].replace("usas", "usasup", regex=False)
         real_img = os.path.join('images', row["media_source"], image_fn)
         original_is_fake = row["is_fake"]
 
