@@ -231,8 +231,46 @@ def expand_dataset(
 # =========================================================
 # 3) Full pipeline
 # =========================================================
-def create_multimodal_splits(input_csv, output_dir=".", seed=42):
+def create_multimodal_splits(llama3_csv, input_csv, output_dir=".", seed=42):
+    IMAGE_OUTPUT_DIR = "evons_qwen_{IMAGE_MODEL_NAME}"
+    llama3_df = pd.read_csv(llama3_csv)
     df = pd.read_csv(input_csv)
+
+    df['llama3_rewritten_title'] = llama3_df['llama3_rewritten_title']
+    df['llama3_rewritten_description'] = llama3_df['llama3_rewritten_description']
+    df = df.rename(columns={
+        "qwen_rewritten_title": "qwen_old_rewritten_title",
+        "qwen_rewritten_description": "qwen_old_rewritten_description",
+        "qwen_new_rewritten_title": "qwen_rewritten_title",
+        "qwen_new_rewritten_description": "qwen_rewritten_description",
+        "mixtral_rewritten_title": "mistral_rewritten_title",
+        "mixtral_rewritten_description": "mistral_rewritten_description",
+        "llama3_rewritten_title": "llama_rewritten_title",
+        "llama3_rewritten_description": "llama_rewritten_description",
+        "fake_img_paths": "sd_img_path",
+        "z_image_img_path": "z_img_path"
+    })
+
+    df["sd_img_path"] = df["sd_img_path"].apply(
+        lambda x: os.path.join(IMAGE_OUTPUT_DIR.format(IMAGE_MODEL_NAME="sd"), x))
+    df["flux_img_path"] = df["flux_img_path"].apply(
+        lambda x: os.path.join(IMAGE_OUTPUT_DIR.format(IMAGE_MODEL_NAME="flux"), x))
+    df["z_img_path"] = df["z_img_path"].apply(
+        lambda x: os.path.join(IMAGE_OUTPUT_DIR.format(IMAGE_MODEL_NAME="z_image"), x))
+    df["sdxl_img_path"] = df["sdxl_img_path"].apply(
+        lambda x: os.path.join(IMAGE_OUTPUT_DIR.format(IMAGE_MODEL_NAME="sdxl"), x))
+    df = df.drop(columns=["Unnamed: 0"])
+
+    cols = [
+        "qwen_rewritten_title",
+        "llama_rewritten_title",
+        "mistral_rewritten_title",
+        "qwen_rewritten_description",
+        "llama_rewritten_description",
+        "mistral_rewritten_description",
+    ]
+    df[cols] = df[cols].apply(
+        lambda col: col.str.replace(r'^"""|"""$', '', regex=True))
 
     required_cols = [
         "title",
@@ -242,6 +280,9 @@ def create_multimodal_splits(input_csv, output_dir=".", seed=42):
         "qwen_rewritten_title",
         "llama_rewritten_title",
         "mistral_rewritten_title",
+        "qwen_rewritten_description",
+        "llama_rewritten_description",
+        "mistral_rewritten_description",
         "sd_img_path",
         "flux_img_path",
         "z_img_path",
@@ -282,6 +323,10 @@ def create_multimodal_splits(input_csv, output_dir=".", seed=42):
     train_path = f"{output_dir}/train_multilabel.csv"
     val_path = f"{output_dir}/val_multilabel.csv"
     test_path = f"{output_dir}/test_multilabel.csv"
+
+    print(train_expanded.head(10))
+    print(val_expanded.head(10))
+    print(test_expanded.head(10))
 
     train_expanded.to_csv(train_path, index=False)
     val_expanded.to_csv(val_path, index=False)
@@ -327,7 +372,8 @@ def create_multimodal_splits(input_csv, output_dir=".", seed=42):
 # =========================================================
 if __name__ == "__main__":
     train_expanded, val_expanded, test_expanded = create_multimodal_splits(
-        input_csv="evons_data/evons_exp.csv",
-        output_dir="evons_data",
+        llama3_csv="data/evons_exp_llama3.csv",
+        input_csv="data/evons_exp.csv",
+        output_dir="data",
         seed=42
     )
