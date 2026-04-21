@@ -5,7 +5,7 @@ from transformers import ResNetForImageClassification
 
 
 class FakeNewsMultimodal(nn.Module):
-    def __init__(self):
+    def __init__(self, output_dim: int = 2):
         super().__init__()
 
         # Text encoder
@@ -28,7 +28,7 @@ class FakeNewsMultimodal(nn.Module):
             nn.Linear(text_dim + image_dim, 512),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(512, 2)
+            nn.Linear(512, output_dim)
         )
 
     def forward(self, input_ids, attention_mask, images):
@@ -49,7 +49,7 @@ class FakeNewsMultimodal(nn.Module):
 
 
 class FakeNewsMultimodalSplit(nn.Module):
-    def __init__(self):
+    def __init__(self, output_dim: int = 2):
         super().__init__()
 
         self.text_encoder = BertModel.from_pretrained("bert-base-uncased")
@@ -83,7 +83,7 @@ class FakeNewsMultimodalSplit(nn.Module):
             nn.Linear(text_dim + image_dim, 512),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(512, 2)
+            nn.Linear(512, output_dim)
         )
 
     def forward(self, input_ids, attention_mask, images):
