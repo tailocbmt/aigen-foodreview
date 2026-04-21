@@ -7,7 +7,7 @@ import logging
 from torch.optim import AdamW
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from torch.utils.data import DataLoader, Subset
-from modules.dataset import EvonsMultimodalDataset, MultimodalDataset, HintsOfTruthMultimodalDataset
+from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, MultimodalDataset, HintsOfTruthMultimodalDataset
 from larimar_base.base_models import CLIPDetector, FLAVADetector
 import torch.nn as nn
 try:
@@ -126,8 +126,10 @@ elif dataset == "evons":
     train = Subset(full_data, train_idx)
     val = Subset(full_data, val_idx)
 else:
-    train = MultimodalDataset(train_file, image_dir, processor, MAX_LENGTH)
-    val = MultimodalDataset(val_file, image_dir, processor, MAX_LENGTH)
+    train = EvonsOfflineMultimodalDataset(
+        train_file, image_dir, processor, MAX_LENGTH)
+    val = EvonsOfflineMultimodalDataset(
+        val_file, image_dir, processor, MAX_LENGTH)
 
 train_dataloader = DataLoader(train, BATCH_SIZE, shuffle=True)
 print(f'Loaded Traininig File: {train_file}.')
