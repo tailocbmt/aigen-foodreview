@@ -9,6 +9,7 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 from torch.utils.data import DataLoader, Subset
 from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, MultimodalDataset, HintsOfTruthMultimodalDataset
 from larimar_base.base_models import CLIPDetector, FLAVADetector
+from larimar_base.multi_label_models import FakeNewsMultimodal
 import torch.nn as nn
 try:
     import wandb
@@ -87,6 +88,8 @@ elif model_name == 'flava':
     backbone = FlavaModel.from_pretrained("facebook/flava-full")
     processor = FlavaProcessor.from_pretrained("facebook/flava-full")
     model = FLAVADetector(backbone, processor, out_dim=output_dim)
+elif model_name == 'fakenews':
+    model = FakeNewsMultimodal(out_dim=output_dim)
 else:
     pass
 model = model.to(device)
