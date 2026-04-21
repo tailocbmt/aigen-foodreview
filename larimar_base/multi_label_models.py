@@ -31,7 +31,10 @@ class FakeNewsMultimodal(nn.Module):
             nn.Linear(512, output_dim)
         )
 
-    def forward(self, input_ids, attention_mask, images):
+    def forward(self, inputs):
+        images = inputs[0]
+        input_ids = inputs[1]
+        attention_mask = inputs[2]
         # Text
         text_outputs = self.text_encoder(
             input_ids=input_ids, attention_mask=attention_mask)

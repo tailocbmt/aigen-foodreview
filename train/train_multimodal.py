@@ -1,6 +1,6 @@
 import json
 from sklearn.model_selection import train_test_split
-from transformers import CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
+from transformers import AutoImageProcessor, AutoTokenizer, CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
 import torch
 import os
 import logging
@@ -89,6 +89,9 @@ elif model_name == 'flava':
     processor = FlavaProcessor.from_pretrained("facebook/flava-full")
     model = FLAVADetector(backbone, processor, out_dim=output_dim)
 elif model_name == 'fakenews':
+    processor = []
+    processor[0] = AutoTokenizer.from_pretrained('bert-base-uncased')
+    processor[1] = AutoImageProcessor.from_pretrained("microsoft/resnet-50")
     model = FakeNewsMultimodal(output_dim=output_dim)
 else:
     pass

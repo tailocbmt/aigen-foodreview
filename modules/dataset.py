@@ -349,14 +349,30 @@ class EvonsOfflineMultimodalDataset(Dataset):
         return title or description
 
     def tokenize(self, text: list, images: list):
-        return self.processor(
-            text=text,
-            images=images,
-            return_tensors="pt",
-            max_length=self.max_length,
-            truncation=True,
-            padding="max_length",
-        )
+        if isinstance(self.tokenizer[0], list):
+            image = self.tokenizer[0](image, return_tensors="pt")
+
+            if self.max_length:
+                encoded_text = self.tokenizer[1](
+                    text,
+                    return_tensors="pt",
+                    max_length=self.max_length,
+                    truncation=True,
+                    padding="max_length"
+                )
+            else:
+                encoded_text = self.tokenizer[1](text, return_tensors="pt")
+
+            return [image, encoded_text]
+        else:
+            return self.processor(
+                text=text,
+                images=images,
+                return_tensors="pt",
+                max_length=self.max_length,
+                truncation=True,
+                padding="max_length",
+            )
 
 
 class EvonsOnlineMultimodalDataset(Dataset):
