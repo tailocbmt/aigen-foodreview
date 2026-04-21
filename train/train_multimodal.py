@@ -75,14 +75,18 @@ elif use_wandb and not WANDB_AVAILABLE:
 if model_name not in available_models:
     raise ValueError(f'{model_name} not in {available_models}.')
 
+output_dim = 1
+if dataset == 'evons_multimodal':
+    output_dim = 2
+
 if model_name == 'clip':
     backbone = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
     processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch16')
-    model = CLIPDetector(backbone, processor)
+    model = CLIPDetector(backbone, processor, out_dim=output_dim)
 elif model_name == 'flava':
     backbone = FlavaModel.from_pretrained("facebook/flava-full")
     processor = FlavaProcessor.from_pretrained("facebook/flava-full")
-    model = FLAVADetector(backbone, processor)
+    model = FLAVADetector(backbone, processor, out_dim=output_dim)
 else:
     pass
 model = model.to(device)
