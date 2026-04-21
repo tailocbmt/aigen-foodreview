@@ -374,8 +374,8 @@ def create_multimodal_splits(llama3_csv, input_csv, output_dir=".", seed=42):
 # =========================================================
 if __name__ == "__main__":
     train_expanded, val_expanded, test_expanded = create_multimodal_splits(
-        llama3_csv="data/evons_exp_llama3.csv",
-        input_csv="data/evons_exp.csv",
-        output_dir="data",
+        llama3_csv="evons_data/evons_exp_llama3.csv",
+        input_csv="evons_data/evons_exp.csv",
+        output_dir="evons_data",
         seed=42
     )
