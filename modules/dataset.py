@@ -336,7 +336,7 @@ class EvonsOfflineMultimodalDataset(Dataset):
 
         return {
             "inputs": inputs,
-            "labels": labels,
+            "label": labels,
         }
 
     def _build_text(self, item):
