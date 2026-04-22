@@ -222,7 +222,7 @@ for epoch in range(1, EPOCHS):
         y_true = np.array(labels_val)
         y_pred = np.array(pred_val)
 
-        acc = accuracy_score(pred_val, labels_val, average='macro')
+        acc = accuracy_score(pred_val, labels_val)
         prec = precision_score(pred_val, labels_val, average='macro')
         rec = recall_score(pred_val, labels_val, average='macro')
         f1 = f1_score(pred_val, labels_val, average='macro')

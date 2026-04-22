@@ -11,7 +11,7 @@
   "real_image_dir": "./evons_data/images",
   "image_dir": "./evons_data",
   "EPOCHS": 100,
-  "BATCH_SIZE": 32,
+  "BATCH_SIZE": 64,
   "LR": 0.0001,
   "LR_STEP_SIZE": 8,
   "LR_GAMMA": 0.5,
