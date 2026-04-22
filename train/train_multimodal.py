@@ -169,9 +169,11 @@ for epoch in range(1, EPOCHS):
     for i, batch in enumerate(train_dataloader):
         torch.cuda.empty_cache()
         optimiser.zero_grad()
+
         if i % 100 == 0:
             print(f'{i}th batch..')
         inputs, labels = batch['inputs'], batch['label']
+        print(inputs)
         inputs = {key: tensor.squeeze(1).to(
             device) for key, tensor in inputs.items()}
 

@@ -13,7 +13,7 @@
   "EPOCHS": 100,
   "BATCH_SIZE": 64,
   "LR": 0.0001,
-  "LR_STEP_SIZE": 8,
+  "LR_STEP_SIZE": 5,
   "LR_GAMMA": 0.5,
   "EARLY_STOP": 8,
   "use_wandb": true,
