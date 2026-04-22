@@ -172,12 +172,8 @@ for epoch in range(1, EPOCHS):
         if i % 100 == 0:
             print(f'{i}th batch..')
         inputs, labels = batch['inputs'], batch['label']
-        if isinstance(inputs, dict):
-            inputs = {k: v.squeeze(1).to(device) for k, v in inputs.items()}
-        elif isinstance(inputs, (list, tuple)):
-            inputs = [x.to(device) if hasattr(x, "to") else x for x in inputs]
-        else:
-            inputs = inputs.to(device)
+        inputs = {key: tensor.squeeze(1).to(
+            device) for key, tensor in inputs_val.items()}
 
         labels = torch.tensor(batch['label'], dtype=torch.float64)
         labels = labels.to(device)
