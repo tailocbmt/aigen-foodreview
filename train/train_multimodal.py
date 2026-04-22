@@ -166,29 +166,29 @@ for epoch in range(1, EPOCHS):
     train_loss = 0.0
 
     print(f'Epoch: {epoch}')
-    # for i, batch in enumerate(train_dataloader):
-    #     torch.cuda.empty_cache()
-    #     optimiser.zero_grad()
-    #     if i % 100 == 0:
-    #         print(f'{i}th batch..')
-    #     inputs, labels = batch['inputs'], batch['label']
-    #     if isinstance(inputs, dict):
-    #         inputs = {k: v.squeeze(1).to(device) for k, v in inputs.items()}
-    #     elif isinstance(inputs, (list, tuple)):
-    #         inputs = [x.to(device) if hasattr(x, "to") else x for x in inputs]
-    #     else:
-    #         inputs = inputs.to(device)
+    for i, batch in enumerate(train_dataloader):
+        torch.cuda.empty_cache()
+        optimiser.zero_grad()
+        if i % 100 == 0:
+            print(f'{i}th batch..')
+        inputs, labels = batch['inputs'], batch['label']
+        if isinstance(inputs, dict):
+            inputs = {k: v.squeeze(1).to(device) for k, v in inputs.items()}
+        elif isinstance(inputs, (list, tuple)):
+            inputs = [x.to(device) if hasattr(x, "to") else x for x in inputs]
+        else:
+            inputs = inputs.to(device)
 
-    #     labels = torch.tensor(batch['label'], dtype=torch.float64)
-    #     labels = labels.to(device)
+        labels = torch.tensor(batch['label'], dtype=torch.float64)
+        labels = labels.to(device)
 
-    #     output = model(inputs).squeeze(1).to(torch.float64)
+        output = model(inputs).squeeze(1).to(torch.float64)
 
-    #     loss = criterion(output, labels)
-    #     loss.backward()
-    #     optimiser.step()
+        loss = criterion(output, labels)
+        loss.backward()
+        optimiser.step()
 
-    #     train_loss += loss.item()
+        train_loss += loss.item()
     #     # break
 
     avg_train_loss = train_loss / len(train_dataloader)
