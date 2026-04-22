@@ -91,8 +91,8 @@ elif model_name == 'flava':
     model = FLAVADetector(backbone, processor, out_dim=output_dim)
 elif model_name == 'fakenews':
     processor = []
-    processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
     processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
+    processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
     model = FakeNewsMultimodal(output_dim=output_dim)
 else:
     pass
