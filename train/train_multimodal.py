@@ -173,7 +173,7 @@ for epoch in range(1, EPOCHS):
         if i % 100 == 0:
             print(f'{i}th batch..')
         inputs, labels = batch['inputs'], batch['label']
-        print(inputs)
+        print(inputs.keys())
         inputs = {key: tensor.squeeze(1).to(
             device) for key, tensor in inputs.items()}
 
