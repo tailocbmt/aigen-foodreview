@@ -202,10 +202,8 @@ for epoch in range(1, EPOCHS):
             inputs_val = batchv['inputs']
             inputs_val = {key: tensor.squeeze(1).to(
                 device) for key, tensor in inputs_val.items()}
-            label_val = batchv['label'].numpy().tolist()
 
-            label_val_tensor = torch.tensor(
-                batchv['label'], dtype=torch.float64).to(device)
+            labels = batchv['label'].to(device).float()
 
             outputs = model(inputs_val)
 
