@@ -45,7 +45,7 @@ class FakeNewsMultimodal(nn.Module):
         image_features = image_outputs.logits  # now 2048-dim
 
         # Fusion
-        rint("text_features.shape:", text_features.shape)
+        print("text_features.shape:", text_features.shape)
         print("image_features.shape:", image_features.shape)
         combined = torch.cat((text_features, image_features), dim=1)
 
