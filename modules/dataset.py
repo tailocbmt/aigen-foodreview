@@ -350,20 +350,27 @@ class EvonsOfflineMultimodalDataset(Dataset):
 
     def tokenize(self, text: list, images: list):
         if isinstance(self.tokenizer[0], list):
-            image = self.tokenizer[0](image, return_tensors="pt")
+            image_inputs = self.tokenizer[0](
+                images=images, return_tensors="pt")
 
             if self.max_length:
-                encoded_text = self.tokenizer[1](
+                text_inputs = self.tokenizer[1](
                     text,
                     return_tensors="pt",
                     max_length=self.max_length,
                     truncation=True,
-                    padding="max_length"
+                    padding="max_length",
                 )
             else:
-                encoded_text = self.tokenizer[1](text, return_tensors="pt")
+                text_inputs = self.tokenizer[1](
+                    text,
+                    return_tensors="pt",
+                )
 
-            return [image, encoded_text]
+            return {
+                **image_inputs,
+                **text_inputs,
+            }
         else:
             return self.processor(
                 text=text,

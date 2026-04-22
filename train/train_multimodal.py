@@ -1,4 +1,5 @@
 import json
+import numpy as np
 from sklearn.model_selection import train_test_split
 from transformers import AutoImageProcessor, AutoTokenizer, CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
 import torch
@@ -165,25 +166,30 @@ for epoch in range(1, EPOCHS):
     train_loss = 0.0
 
     print(f'Epoch: {epoch}')
-    for i, batch in enumerate(train_dataloader):
-        torch.cuda.empty_cache()
-        optimiser.zero_grad()
-        if i % 100 == 0:
-            print(f'{i}th batch..')
-        inputs, labels = batch['inputs'], batch['label']
-        inputs = {key: tensor.squeeze(1).to(device)
-                  for key, tensor in inputs.items()}
-        labels = torch.tensor(batch['label'], dtype=torch.float64)
-        labels = labels.to(device)
+    # for i, batch in enumerate(train_dataloader):
+    #     torch.cuda.empty_cache()
+    #     optimiser.zero_grad()
+    #     if i % 100 == 0:
+    #         print(f'{i}th batch..')
+    #     inputs, labels = batch['inputs'], batch['label']
+    #     if isinstance(inputs, dict):
+    #         inputs = {k: v.squeeze(1).to(device) for k, v in inputs.items()}
+    #     elif isinstance(inputs, (list, tuple)):
+    #         inputs = [x.to(device) if hasattr(x, "to") else x for x in inputs]
+    #     else:
+    #         inputs = inputs.to(device)
 
-        output = model(inputs).squeeze(1).to(torch.float64)
+    #     labels = torch.tensor(batch['label'], dtype=torch.float64)
+    #     labels = labels.to(device)
 
-        loss = criterion(output, labels)
-        loss.backward()
-        optimiser.step()
+    #     output = model(inputs).squeeze(1).to(torch.float64)
 
-        train_loss += loss.item()
-        # break
+    #     loss = criterion(output, labels)
+    #     loss.backward()
+    #     optimiser.step()
+
+    #     train_loss += loss.item()
+    #     # break
 
     avg_train_loss = train_loss / len(train_dataloader)
 
@@ -201,24 +207,27 @@ for epoch in range(1, EPOCHS):
             label_val_tensor = torch.tensor(
                 batchv['label'], dtype=torch.float64).to(device)
 
-            output_val = model(inputs_val).squeeze(1).to(torch.float64)
+            outputs = model(inputs_val)
 
-            loss_val = criterion(output_val, label_val_tensor)
-            val_loss += loss_val.item()
+            loss = criterion(outputs, labels)
+            val_loss += loss.item()
 
-            predictions = torch.sigmoid(output_val)
-            predictions = torch.where(
-                predictions > 0.5, 1, 0).detach().cpu().numpy().tolist()
+            probs = torch.sigmoid(outputs)
+            preds = (probs > 0.5).int()
 
-            pred_val.extend(predictions)
-            labels_val.extend(label_val)
+            pred_val.extend(preds.cpu().numpy())
+            labels_val.extend(labels.cpu().numpy())
             # break
 
         avg_val_loss = val_loss / len(val_dataloader)
-        acc = accuracy_score(pred_val, labels_val)
-        prec = precision_score(pred_val, labels_val)
-        rec = recall_score(pred_val, labels_val)
-        f1 = f1_score(pred_val, labels_val)
+        # Convert to numpy
+        y_true = np.array(labels_val)
+        y_pred = np.array(pred_val)
+
+        acc = accuracy_score(pred_val, labels_val, average='macro')
+        prec = precision_score(pred_val, labels_val, average='macro')
+        rec = recall_score(pred_val, labels_val, average='macro')
+        f1 = f1_score(pred_val, labels_val, average='macro')
 
         logging.info(
             f'Epoch: {epoch}, Accuracy: {acc}, LR: {LR}, Batch Size: {BATCH_SIZE}.')
