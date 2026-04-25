@@ -34,6 +34,12 @@ class FakeNewsMultimodal(nn.Module):
             nn.Linear(512, output_dim)
         )
 
+    def set_memory_mode(self, mode: str = ''):
+        pass
+
+    def reset_memory(self):
+        pass
+
     def fusion_block(self, text, image):
         combined = torch.cat((text, image), dim=1)
         return combined
