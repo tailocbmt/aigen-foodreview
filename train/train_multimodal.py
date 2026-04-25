@@ -12,6 +12,7 @@ from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDatase
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
 from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, NetShareFusionCLIP
 import torch.nn as nn
+from modules.utils import multilabel_accuracy
 try:
     import wandb
     WANDB_AVAILABLE = True
@@ -257,6 +258,7 @@ for epoch in range(1, EPOCHS):
         y_pred = np.array(pred_val)
 
         acc = accuracy_score(y_true, y_pred)
+        multi_acc = multilabel_accuracy(y_true, y_pred)
         prec = precision_score(y_true, y_pred, average='macro')
         rec = recall_score(y_true, y_pred, average='macro')
         macro_f1 = f1_score(y_true, y_pred, average="macro")
@@ -269,6 +271,7 @@ for epoch in range(1, EPOCHS):
         print(f'# Train Loss: {avg_train_loss}')
         print(f'# Val Loss: {avg_val_loss}')
         print(f'# Accuracy: {acc}')
+        print(f'# Multilabel Accuracy: {multi_acc}')
         print(f'# Precision: {prec}')
         print(f'# Recall: {rec}')
         print(f'# F1-score Macro: {macro_f1}')
@@ -282,6 +285,7 @@ for epoch in range(1, EPOCHS):
                 "train/loss": avg_train_loss,
                 "val/loss": avg_val_loss,
                 "val/accuracy": acc,
+                "val/multi_accuracy": multi_acc,
                 "val/precision": prec,
                 "val/recall": rec,
                 "val/macro_f1_score": macro_f1,

@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, Subset
 from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, HintsOfTruthMultimodalDataset, MultimodalDataset
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
 from larimar_base.multi_label_models import FakeNewsMultimodal, FakeNewsMultimodalWMemory
+from modules.utils import multilabel_accuracy
 
 # CONFIG
 
@@ -144,6 +145,7 @@ with torch.no_grad():
     y_pred = np.array(pred_val)
 
     acc = accuracy_score(y_true, y_pred)
+    multi_acc = multilabel_accuracy(y_true, y_pred)
     prec = precision_score(y_true, y_pred, average='macro')
     rec = recall_score(y_true, y_pred, average='macro')
     macro_f1 = f1_score(y_true, y_pred, average="macro")
@@ -152,6 +154,7 @@ with torch.no_grad():
     hamming = hamming_loss(y_true, y_pred)
 
     print(f'Accuracy on the test set: {acc}')
+    print(f'Multilabel Accuracy: {multi_acc}')
     print(f'Precision on the test set: {prec}')
     print(f'Recall on the test set: {rec}')
     print(f'Macro F1-score on the test set: {macro_f1}')
