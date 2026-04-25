@@ -68,16 +68,6 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
         memory_mode="read_write",
         fusion_type="add"
     ):
-        super().__init__(
-            feature_dim=1024,
-            out_dim=out_dim,
-            use_memory=use_memory,
-            memory_size=memory_size,
-            memory_mode=memory_mode,
-            fusion_type=fusion_type
-        )
-
-        # Text encoder
         self.text_encoder = BertModel.from_pretrained("bert-base-uncased")
         text_dim = self.text_encoder.config.hidden_size  # 768
 
@@ -90,11 +80,23 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
 
         # Remove classification head → get features
         self.image_encoder.classifier = nn.Identity()
-        image_dim = 2048
+        image_dim = 768
+
+        # Memory dim
+        memory_dim = text_dim + image_dim
+
+        super().__init__(
+            feature_dim=memory_dim,
+            out_dim=out_dim,
+            use_memory=use_memory,
+            memory_size=memory_size,
+            memory_mode=memory_mode,
+            fusion_type=fusion_type
+        )
 
         # Fusion classifier
         self.classifier = nn.Sequential(
-            nn.Linear(text_dim + image_dim, 512),
+            nn.Linear(memory_dim, 512),
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(512, out_dim)

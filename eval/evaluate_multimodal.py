@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score, hamming_loss, precision_score, recal
 from torch.utils.data import DataLoader, Subset
 from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, HintsOfTruthMultimodalDataset, MultimodalDataset
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
-from larimar_base.multi_label_models import FakeNewsMultimodal, FakeNewsMultimodalWMemory
+from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, NetShareFusionCLIP
 from modules.utils import multilabel_accuracy
 
 # CONFIG
@@ -23,7 +23,7 @@ with open(config_path, 'r') as file:
 # Extract values into variables
 # Options for model_name: 'clip', 'flava'
 model_name = config.get('model_name', 'clip')
-USE_MEMORY = config.get('use_memory', False)
+MODEL_MODE = config.get('mode', "w/o memory")
 # Note: for 'clip', max length should be 77
 dataset = config.get('dataset', 'food_review')
 MAX_LENGTH = config.get('MAX_LENGTH', 512)
@@ -46,6 +46,7 @@ weights = sorted(weights, key=lambda x: int(x.split('-')[1].split('.')[0]))
 weights = weights[-1]
 weights_dir = os.path.join(output_dir, weights)
 
+output_dim = 1
 if dataset == 'evons_multimodal':
     output_dim = 2
 
@@ -53,28 +54,43 @@ if model_name == 'clip':
     backbone = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
     processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch16')
 
-    if USE_MEMORY is False:
+    if MODEL_MODE == "w/o mem":
         model = CLIPDetector(backbone, processor, out_dim=output_dim)
-    else:
+    elif MODEL_MODE == "w/ mem":
         model = CLIPDetectorWMemory(backbone, processor, out_dim=output_dim)
+    elif MODEL_MODE == "w/ coatt + mem":
+        model = CLIPDetectorWMemoryCoAttention(
+            backbone, processor, out_dim=output_dim)
 
 elif model_name == 'flava':
     backbone = FlavaModel.from_pretrained("facebook/flava-full")
     processor = FlavaProcessor.from_pretrained("facebook/flava-full")
 
-    if USE_MEMORY is False:
+    if MODEL_MODE == "w/o mem":
         model = FLAVADetector(backbone, processor, out_dim=output_dim)
-    else:
+    elif MODEL_MODE == "w/ mem":
         model = FLAVADetectorWMemory(backbone, processor, out_dim=output_dim)
+
 elif model_name == 'fakenews':
     processor = []
     processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
     processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
 
-    if USE_MEMORY is False:
+    if MODEL_MODE == "w/o mem":
         model = FakeNewsMultimodal(output_dim=output_dim)
-    else:
+    elif MODEL_MODE == "w/ mem":
         model = FakeNewsMultimodalWMemory(out_dim=output_dim)
+    elif MODEL_MODE == "w/ coatt":
+        model = FakeNewsMultimodalCoAttention(out_dim=output_dim)
+    elif MODEL_MODE == "w/ coatt + mem":
+        model = FakeNewsMultimodalWMemoryCoAttention(out_dim=output_dim)
+elif model_name == 'netsharefusion':
+    backbone = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
+    processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch16')
+
+    model = NetShareFusionCLIP(
+        backbone=backbone,
+        num_labels=output_dim)
 else:
     pass
 
