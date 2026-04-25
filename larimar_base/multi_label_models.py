@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import BertModel
 from transformers import ResNetForImageClassification
-from base_models import MemoryAugmentedDetector
-from utils import DctCNN, PositionalWiseFeedForward, multimodal_fusion_layer
+from larimar_base.base_models import MemoryAugmentedDetector
+from larimar_base.utils import DctCNN, PositionalWiseFeedForward, multimodal_fusion_layer
 
 
 class FakeNewsMultimodal(nn.Module):
