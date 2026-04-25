@@ -73,6 +73,7 @@ elif model_name == 'fakenews':
     if USE_MEMORY is False:
         model = FakeNewsMultimodal(output_dim=output_dim)
     else:
+        pass
         # model = FakeNewsMultimodalWMemory(out_dim=output_dim)
 else:
     pass
