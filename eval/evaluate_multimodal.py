@@ -30,7 +30,7 @@ MAX_LENGTH = config.get('MAX_LENGTH', 512)
 test_file = config.get('test_file', '')
 output_dir = config.get('output_dir', '')
 image_dir = config.get('image_dir', '')
-BATCH_SIZE = config.get('BATCH_SIZE', 16)
+BATCH_SIZE = 512
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 available_models = ['clip', 'flava', 'fakenews']
