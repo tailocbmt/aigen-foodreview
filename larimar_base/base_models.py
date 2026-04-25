@@ -6,6 +6,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+class BaseDetector(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def set_memory_mode(self, mode: str = ''):
+        pass
+
+    def reset_memory(self):
+        pass
+
+
 class CLIPDetector(nn.Module):
     def __init__(self, backbone, processor, out_dim=1):
         super(CLIPDetector, self).__init__()
@@ -185,6 +196,15 @@ class MemoryAugmentedDetector(nn.Module):
 
         else:
             raise ValueError(f"Invalid memory_mode: {self.memory_mode}")
+
+    # 🔥 NEW: clean control functions
+    def set_memory_mode(self, mode: str):
+        assert mode in ["read_write", "read", "off"]
+        self.memory_mode = mode
+
+    def reset_memory(self):
+        if self.use_memory and getattr(self, "episodic_memory", None) is not None:
+            self.episodic_memory.reset_memory()
 
     def feature_extractor(self, inputs):
         raise NotImplementedError

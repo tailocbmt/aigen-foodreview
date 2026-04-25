@@ -6,11 +6,11 @@ import torch
 import os
 import logging
 from torch.optim import AdamW
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import accuracy_score, f1_score, hamming_loss, precision_score, recall_score
 from torch.utils.data import DataLoader, Subset
 from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, MultimodalDataset, HintsOfTruthMultimodalDataset
-from larimar_base.base_models import CLIPDetector, FLAVADetector
-from larimar_base.multi_label_models import FakeNewsMultimodal
+from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
+from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, NetShareFusionCLIP
 import torch.nn as nn
 try:
     import wandb
@@ -30,6 +30,7 @@ with open(config_path, 'r') as file:
 
 # Options for model_name: 'clip', 'flava'
 model_name = config.get('model_name', 'flava')
+MODEL_MODE = config.get('mode', "w/o memory")
 # Note: for 'clip', max length should be 77
 MAX_LENGTH = config.get('MAX_LENGTH', 512)
 # File paths
@@ -84,18 +85,47 @@ if dataset == 'evons_multimodal':
 if model_name == 'clip':
     backbone = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
     processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch16')
-    model = CLIPDetector(backbone, processor, out_dim=output_dim)
+
+    if MODEL_MODE == "w/o mem":
+        model = CLIPDetector(backbone, processor, out_dim=output_dim)
+    elif MODEL_MODE == "w/ mem":
+        model = CLIPDetectorWMemory(backbone, processor, out_dim=output_dim)
+    elif MODEL_MODE == "w/ coatt + mem":
+        model = CLIPDetectorWMemoryCoAttention(
+            backbone, processor, out_dim=output_dim)
+
 elif model_name == 'flava':
     backbone = FlavaModel.from_pretrained("facebook/flava-full")
     processor = FlavaProcessor.from_pretrained("facebook/flava-full")
-    model = FLAVADetector(backbone, processor, out_dim=output_dim)
+
+    if MODEL_MODE == "w/o mem":
+        model = FLAVADetector(backbone, processor, out_dim=output_dim)
+    elif MODEL_MODE == "w/ mem":
+        model = FLAVADetectorWMemory(backbone, processor, out_dim=output_dim)
+
 elif model_name == 'fakenews':
     processor = []
     processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
     processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
-    model = FakeNewsMultimodal(output_dim=output_dim)
+
+    if MODEL_MODE == "w/o mem":
+        model = FakeNewsMultimodal(output_dim=output_dim)
+    elif MODEL_MODE == "w/ mem":
+        model = FakeNewsMultimodalWMemory(out_dim=output_dim)
+    elif MODEL_MODE == "w/ coatt":
+        model = FakeNewsMultimodalCoAttention(out_dim=output_dim)
+    elif MODEL_MODE == "w/ coatt + mem":
+        model = FakeNewsMultimodalWMemoryCoAttention(out_dim=output_dim)
+elif model_name == 'netsharefusion':
+    backbone = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
+    processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch16')
+
+    model = NetShareFusionCLIP(
+        backbone=backbone,
+        num_labels=output_dim)
 else:
     pass
+
 model = model.to(device)
 print(f'Model {model_name} loaded.')
 
@@ -160,7 +190,11 @@ criterion = nn.BCEWithLogitsLoss()
 print('Training..')
 count = 0
 for epoch in range(1, EPOCHS):
+    # reset before training
+    model.reset_memory()
     model.train()
+    model.set_memory_mode("read_write")
+
     pred_val = []
     labels_val = []
     train_loss = 0.0
@@ -170,7 +204,7 @@ for epoch in range(1, EPOCHS):
         torch.cuda.empty_cache()
         optimiser.zero_grad()
 
-        if i % 100 == 0:
+        if i % 1000 == 0:
             print(f'{i}th batch..')
         inputs, labels = batch['inputs'], batch['label']
         inputs = {key: tensor.squeeze(1).to(
@@ -192,7 +226,10 @@ for epoch in range(1, EPOCHS):
 
     val_loss = 0.0
 
+    model.reset_memory()
     model.eval()
+    model.set_memory_mode("read")
+
     with torch.no_grad():
         print('Validating..')
         for j, batchv in enumerate(val_dataloader):
@@ -219,10 +256,13 @@ for epoch in range(1, EPOCHS):
         y_true = np.array(labels_val)
         y_pred = np.array(pred_val)
 
-        acc = accuracy_score(pred_val, labels_val)
-        prec = precision_score(pred_val, labels_val, average='macro')
-        rec = recall_score(pred_val, labels_val, average='macro')
-        f1 = f1_score(pred_val, labels_val, average='macro')
+        acc = accuracy_score(y_true, y_pred)
+        prec = precision_score(y_true, y_pred, average='macro')
+        rec = recall_score(y_true, y_pred, average='macro')
+        macro_f1 = f1_score(y_true, y_pred, average="macro")
+        micro_f1 = f1_score(y_true, y_pred, average="micro")
+        samples_f1 = f1_score(y_true, y_pred, average="samples")
+        hamming = hamming_loss(y_true, y_pred)
 
         logging.info(
             f'Epoch: {epoch}, Accuracy: {acc}, LR: {LR}, Batch Size: {BATCH_SIZE}.')
@@ -231,7 +271,10 @@ for epoch in range(1, EPOCHS):
         print(f'# Accuracy: {acc}')
         print(f'# Precision: {prec}')
         print(f'# Recall: {rec}')
-        print(f'# F1-score: {f1}')
+        print(f'# F1-score Macro: {macro_f1}')
+        print(f'# F1-score Micro: {micro_f1}')
+        print(f'# F1-score Sample: {samples_f1}')
+        print(f'# Hamming loss: {hamming}')
 
         if use_wandb and WANDB_AVAILABLE:
             wandb.log({
@@ -241,12 +284,15 @@ for epoch in range(1, EPOCHS):
                 "val/accuracy": acc,
                 "val/precision": prec,
                 "val/recall": rec,
-                "val/f1_score": f1,
+                "val/macro_f1_score": macro_f1,
+                "val/macro_f1_score": micro_f1,
+                "val/macro_f1_score": samples_f1,
+                "val/hamming_loss": hamming,
                 "lr": optimiser.param_groups[0]['lr']
             })
 
-        if acc > best_acc:
-            best_acc = acc
+        if macro_f1 > best_acc:
+            best_acc = macro_f1
             save_path = os.path.join(output_dir, f'weight-{epoch}.pt')
 
             torch.save(model.state_dict(), save_path)
@@ -254,6 +300,7 @@ for epoch in range(1, EPOCHS):
 
             if use_wandb and WANDB_AVAILABLE:
                 wandb.log({
+                    "best_macro_f1": best_acc,
                     "best_val_accuracy": best_acc,
                     "best_epoch": epoch
                 })

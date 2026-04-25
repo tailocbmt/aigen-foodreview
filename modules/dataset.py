@@ -12,8 +12,7 @@ from datasets import load_dataset
 import pandas as pd
 import os
 from PIL import Image
-
-# ── Change 1: Use a dataclass for config instead of sprawling __init__ args ──
+from larimar_base.utils import process_dct_img
 
 
 @dataclass
@@ -303,85 +302,6 @@ class EvonsMultimodalDataset(Dataset):
         return inputs
 
 
-class EvonsOfflineMultimodalDataset(Dataset):
-    def __init__(self, file, image_dir, processor, max_length):
-        super().__init__()
-        self.data = pd.read_csv(file)
-
-        self.image_dir = image_dir
-        self.processor = processor
-        self.max_length = max_length
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, index):
-        item = self.data.iloc[index]
-
-        text = self._build_text(item)
-
-        image_rel_path = item["image_path"]
-        image_path = os.path.join(self.image_dir, image_rel_path)
-
-        image = Image.open(image_path).convert("RGB")
-        inputs = self.tokenize(text=[text], images=[image])
-
-        labels = torch.tensor(
-            [
-                int(item["label_text"]),
-                int(item["label_image"]),
-            ],
-            dtype=torch.float
-        )
-
-        return {
-            "inputs": inputs,
-            "label": labels,
-        }
-
-    def _build_text(self, item):
-        title = "" if pd.isna(item["title"]) else str(item["title"])
-        description = "" if pd.isna(
-            item["description"]) else str(item["description"])
-
-        if title and description:
-            return f"{title} {description}"
-        return title or description
-
-    def tokenize(self, text: list, images: list):
-        if isinstance(self.processor, list):
-            image_inputs = self.processor[0](
-                images=images, return_tensors="pt")
-
-            if self.max_length:
-                text_inputs = self.processor[1](
-                    text,
-                    return_tensors="pt",
-                    max_length=self.max_length,
-                    truncation=True,
-                    padding="max_length",
-                )
-            else:
-                text_inputs = self.processor[1](
-                    text,
-                    return_tensors="pt",
-                )
-
-            return {
-                **image_inputs,
-                **text_inputs,
-            }
-        else:
-            return self.processor(
-                text=text,
-                images=images,
-                return_tensors="pt",
-                max_length=self.max_length,
-                truncation=True,
-                padding="max_length",
-            )
-
-
 class EvonsOnlineMultimodalDataset(Dataset):
     def __init__(self, cfg: DatasetConfig, processor):
         super().__init__()
@@ -554,3 +474,188 @@ class EvonsOnlineMultimodalDataset(Dataset):
             truncation=True,
             padding="max_length",
         )
+
+
+class EvonsOfflineMultimodalDataset(Dataset):
+    def __init__(self, file, image_dir, processor, max_length):
+        super().__init__()
+        self.data = pd.read_csv(file)
+
+        self.image_dir = image_dir
+        self.processor = processor
+        self.max_length = max_length
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        item = self.data.iloc[index]
+
+        text = self._build_text(item)
+
+        image_rel_path = item["image_path"]
+        image_path = os.path.join(self.image_dir, image_rel_path)
+
+        image = Image.open(image_path).convert("RGB")
+        inputs = self.tokenize(text=[text], images=[image])
+
+        labels = torch.tensor(
+            [
+                int(item["label_text"]),
+                int(item["label_image"]),
+            ],
+            dtype=torch.float
+        )
+
+        return {
+            "inputs": inputs,
+            "label": labels,
+        }
+
+    def _build_text(self, item):
+        title = "" if pd.isna(item["title"]) else str(item["title"])
+        description = "" if pd.isna(
+            item["description"]) else str(item["description"])
+
+        if title and description:
+            return f"{title} {description}"
+        return title or description
+
+    def tokenize(self, text: list, images: list):
+        if isinstance(self.processor, list):
+            image_inputs = self.processor[0](
+                images=images, return_tensors="pt")
+
+            if self.max_length:
+                text_inputs = self.processor[1](
+                    text,
+                    return_tensors="pt",
+                    max_length=self.max_length,
+                    truncation=True,
+                    padding="max_length",
+                )
+            else:
+                text_inputs = self.processor[1](
+                    text,
+                    return_tensors="pt",
+                )
+
+            return {
+                **image_inputs,
+                **text_inputs,
+            }
+        else:
+            return self.processor(
+                text=text,
+                images=images,
+                return_tensors="pt",
+                max_length=self.max_length,
+                truncation=True,
+                padding="max_length",
+            )
+
+
+class EvonsOfflineMultimodalWDctDataset(Dataset):
+    def __init__(
+        self,
+        file,
+        image_dir,
+        processor,
+        max_length,
+        transform_image=None,
+        transform_dct=None,
+    ):
+        super().__init__()
+
+        self.data = pd.read_csv(file)
+        self.image_dir = image_dir
+        self.processor = processor
+        self.max_length = max_length
+
+        self.transform_image = transform_image
+        self.transform_dct = transform_dct
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        item = self.data.iloc[index]
+
+        text = self._build_text(item)
+
+        image_rel_path = item["image_path"]
+        image_path = os.path.join(self.image_dir, image_rel_path)
+
+        image = Image.open(image_path).convert("RGB")
+
+        inputs = self.tokenize(text=[text], images=[image])
+
+        # Standard image tensor for image encoder
+        if self.transform_image is not None:
+            image_tensor = self.transform_image(image)
+            inputs["image"] = image_tensor
+
+        # DCT image tensor for frequency branch
+        if self.transform_dct is not None:
+            gray_image = image.convert("L")
+            dct_img = self.transform_dct(gray_image)
+            dct_img = process_dct_img(dct_img)
+            inputs["dct_img"] = dct_img
+
+        labels = torch.tensor(
+            [
+                int(item["label_text"]),
+                int(item["label_image"]),
+            ],
+            dtype=torch.float
+        )
+
+        return {
+            "inputs": inputs,
+            "label": labels,
+        }
+
+    def _build_text(self, item):
+        title = "" if pd.isna(item["title"]) else str(item["title"])
+        description = "" if pd.isna(
+            item["description"]) else str(item["description"])
+
+        if title and description:
+            return f"{title} {description}"
+        return title or description
+
+    def tokenize(self, text: list, images: list):
+        if isinstance(self.processor, (list, tuple)):
+            image_inputs = self.processor[0](
+                images=images,
+                return_tensors="pt"
+            )
+
+            if self.max_length:
+                text_inputs = self.processor[1](
+                    text,
+                    return_tensors="pt",
+                    max_length=self.max_length,
+                    truncation=True,
+                    padding="max_length",
+                )
+            else:
+                text_inputs = self.processor[1](
+                    text,
+                    return_tensors="pt",
+                )
+
+            return {
+                **image_inputs,
+                **text_inputs,
+            }
+
+        else:
+            return self.processor(
+                text=text,
+                images=images,
+                return_tensors="pt",
+                max_length=self.max_length,
+                truncation=True,
+                padding="max_length",
+            )
