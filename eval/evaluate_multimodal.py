@@ -1,12 +1,14 @@
+import numpy as np
 from sklearn.model_selection import train_test_split
 import torch
 import os
 import json
-from transformers import CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from transformers import AutoImageProcessor, AutoTokenizer, CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
+from sklearn.metrics import accuracy_score, hamming_loss, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader, Subset
-from modules.dataset import EvonsMultimodalDataset, HintsOfTruthMultimodalDataset, MultimodalDataset
-from larimar_base.base_models import CLIPDetector, FLAVADetector
+from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, HintsOfTruthMultimodalDataset, MultimodalDataset
+from larimar_base.base_models import CLIPDetector, FLAVADetector, FLAVADetectorWMemory
+from larimar_base.multi_label_models import FakeNewsMultimodal, FakeNewsMultimodalWMemory
 
 # CONFIG
 
@@ -19,7 +21,8 @@ with open(config_path, 'r') as file:
 
 # Extract values into variables
 # Options for model_name: 'clip', 'flava'
-model_name = config.get('model_name', 'flava')
+model_name = config.get('model_name', 'clip')
+USE_MEMORY = config.get('use_memory', False)
 # Note: for 'clip', max length should be 77
 dataset = config.get('dataset', 'food_review')
 MAX_LENGTH = config.get('MAX_LENGTH', 512)
@@ -29,7 +32,7 @@ image_dir = config.get('image_dir', '')
 BATCH_SIZE = config.get('BATCH_SIZE', 16)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-available_models = ['clip', 'flava']
+available_models = ['clip', 'flava', 'fakenews']
 best_acc = 0
 
 # MODEL SELECTION
@@ -42,16 +45,35 @@ weights = sorted(weights, key=lambda x: int(x.split('-')[1].split('.')[0]))
 weights = weights[-1]
 weights_dir = os.path.join(output_dir, weights)
 
+if dataset == 'evons_multimodal':
+    output_dim = 2
+
 if model_name == 'clip':
     backbone = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
     processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch16')
-    model = CLIPDetector(backbone, processor)
-    model.load_state_dict(torch.load(weights_dir))
+
+    if USE_MEMORY is False:
+        model = CLIPDetector(backbone, processor, out_dim=output_dim)
+    else:
+        model = CLIPDetectorWMemory(backbone, processor, out_dim=output_dim)
+
 elif model_name == 'flava':
     backbone = FlavaModel.from_pretrained("facebook/flava-full")
     processor = FlavaProcessor.from_pretrained("facebook/flava-full")
-    model = FLAVADetector(backbone, processor)
-    model.load_state_dict(torch.load(weights_dir))
+
+    if USE_MEMORY is False:
+        model = FLAVADetector(backbone, processor, out_dim=output_dim)
+    else:
+        model = FLAVADetectorWMemory(backbone, processor, out_dim=output_dim)
+elif model_name == 'fakenews':
+    processor = []
+    processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
+    processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
+
+    if USE_MEMORY is False:
+        model = FakeNewsMultimodal(output_dim=output_dim)
+    else:
+        model = FakeNewsMultimodalWMemory(out_dim=output_dim)
 else:
     pass
 
@@ -90,7 +112,8 @@ elif dataset == "evons":
     )
     test = Subset(full_data, test_idx)
 else:
-    test = MultimodalDataset(test_file, image_dir, processor, MAX_LENGTH)
+    test = EvonsOfflineMultimodalDataset(
+        test_file, image_dir, processor, MAX_LENGTH)
 
 test_dataloader = DataLoader(test, BATCH_SIZE)
 print(f'Loaded Testing File: {test_file}.')
@@ -99,6 +122,7 @@ pred_val = []
 labels_val = []
 
 model.eval()
+model.set_memory_mode("read")
 with torch.no_grad():
     print('Validating..')
     for j, batchv in enumerate(test_dataloader):
@@ -106,17 +130,27 @@ with torch.no_grad():
         inputs_val = {key: tensor.squeeze(1).to(
             device) for key, tensor in inputs_val.items()}
         label_val = batchv['label'].numpy().tolist()
-        output_val = model(inputs_val).squeeze(1).to(torch.float64)
-        predictions = torch.sigmoid(output_val)
-        predictions = torch.where(
-            predictions > 0.5, 1, 0).detach().cpu().numpy().tolist()
-        pred_val.extend(predictions)
-        labels_val.extend(label_val)
 
-    acc = accuracy_score(pred_val, labels_val)
-    prec = precision_score(pred_val, labels_val)
-    rec = recall_score(pred_val, labels_val)
-    f1 = f1_score(pred_val, labels_val)
+        outputs = model(inputs_val)
+
+        probs = torch.sigmoid(outputs)
+        preds = (probs > 0.5).int()
+
+        pred_val.extend(preds.cpu().numpy())
+        labels_val.extend(labels.cpu().numpy())
+
+    # Convert to numpy
+    y_true = np.array(labels_val)
+    y_pred = np.array(pred_val)
+
+    acc = accuracy_score(y_true, y_pred)
+    prec = precision_score(y_true, y_pred)
+    rec = recall_score(y_true, y_pred)
+    macro_f1 = f1_score(y_true, y_pred, average="macro")
+    micro_f1 = f1_score(y_true, y_pred, average="micro")
+    samples_f1 = f1_score(y_true, y_pred, average="samples")
+    hamming = hamming_loss(y_true, y_pred)
+
     print(f'Accuracy on the test set: {acc}')
     print(f'Precision on the test set: {prec}')
     print(f'Recall on the test set: {rec}')
