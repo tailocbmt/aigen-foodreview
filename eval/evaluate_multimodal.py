@@ -133,6 +133,9 @@ with torch.no_grad():
         labels = batchv['label']
 
         outputs = model(inputs_val)
+        print(outputs)
+        outputs1 = model(inputs_val)
+        print(np.array_equal(outputs.copy(), outputs1.copy()))
 
         probs = torch.sigmoid(outputs)
         preds = (probs > 0.5).int()
