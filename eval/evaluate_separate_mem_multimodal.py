@@ -55,6 +55,7 @@ if model_name == 'clip':
         memory_mode="read",
         fusion_type=fusion_type,   # or "gated_add"
     )
+    model.load_state_dict(torch.load(weights_dir))
 else:
     pass
 

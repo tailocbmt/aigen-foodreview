@@ -78,6 +78,7 @@ elif model_name == 'fakenews':
 else:
     pass
 
+model.load_state_dict(torch.load(weights_dir))
 model = model.to(device)
 print(f'Model {model_name} loaded at weights: {weights}.')
 
@@ -133,9 +134,8 @@ with torch.no_grad():
         labels = batchv['label']
 
         outputs = model(inputs_val)
-        print(outputs)
         outputs1 = model(inputs_val)
-        print(np.array_equal(outputs.copy(), outputs1.copy()))
+        print(np.array_equal(outputs, outputs1))
 
         probs = torch.sigmoid(outputs)
         preds = (probs > 0.5).int()
