@@ -7,7 +7,7 @@ from transformers import AutoImageProcessor, AutoTokenizer, CLIPProcessor, CLIPM
 from sklearn.metrics import accuracy_score, hamming_loss, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader, Subset
 from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, HintsOfTruthMultimodalDataset, MultimodalDataset
-from larimar_base.base_models import CLIPDetector, FLAVADetector, FLAVADetectorWMemory
+from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
 from larimar_base.multi_label_models import FakeNewsMultimodal, FakeNewsMultimodalWMemory
 
 # CONFIG
@@ -73,7 +73,7 @@ elif model_name == 'fakenews':
     if USE_MEMORY is False:
         model = FakeNewsMultimodal(output_dim=output_dim)
     else:
-        model = FakeNewsMultimodalWMemory(out_dim=output_dim)
+        # model = FakeNewsMultimodalWMemory(out_dim=output_dim)
 else:
     pass
 
