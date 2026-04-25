@@ -129,7 +129,7 @@ with torch.no_grad():
         inputs_val = batchv['inputs']
         inputs_val = {key: tensor.squeeze(1).to(
             device) for key, tensor in inputs_val.items()}
-        label_val = batchv['label'].numpy().tolist()
+        labels = batchv['label'].numpy().tolist()
 
         outputs = model(inputs_val)
 
