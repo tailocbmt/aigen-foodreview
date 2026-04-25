@@ -3,11 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import BertModel
 from transformers import ResNetForImageClassification
-from larimar_base.base_models import MemoryAugmentedDetector
+from larimar_base.base_models import BaseDetector, MemoryAugmentedDetector
 from larimar_base.utils import DctCNN, PositionalWiseFeedForward, multimodal_fusion_layer
 
 
-class FakeNewsMultimodal(nn.Module):
+class FakeNewsMultimodal(BaseDetector):
     def __init__(self, output_dim: int = 2):
         super().__init__()
 
@@ -33,12 +33,6 @@ class FakeNewsMultimodal(nn.Module):
             nn.Dropout(0.3),
             nn.Linear(512, output_dim)
         )
-
-    def set_memory_mode(self, mode: str = ''):
-        pass
-
-    def reset_memory(self):
-        pass
 
     def fusion_block(self, text, image):
         combined = torch.cat((text, image), dim=1)

@@ -17,7 +17,7 @@ class BaseDetector(nn.Module):
         pass
 
 
-class CLIPDetector(nn.Module):
+class CLIPDetector(BaseDetector):
     def __init__(self, backbone, processor, out_dim=1):
         super(CLIPDetector, self).__init__()
         self.backbone = backbone
@@ -37,7 +37,7 @@ class CLIPDetector(nn.Module):
         return output
 
 
-class FLAVADetector(nn.Module):
+class FLAVADetector(BaseDetector):
     def __init__(self, backbone, processor, out_dim=1):
         super(FLAVADetector, self).__init__()
         self.backbone = backbone
