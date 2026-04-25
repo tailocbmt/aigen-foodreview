@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score, hamming_loss, precision_score, recal
 from torch.utils.data import DataLoader, Subset
 from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, HintsOfTruthMultimodalDataset, MultimodalDataset
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
-from larimar_base.multi_label_models import FakeNewsMultimodal, FakeNewsMultimodalWMemory
+from larimar_base.multi_label_models import FakeNewsMultimodal
 
 # CONFIG
 
