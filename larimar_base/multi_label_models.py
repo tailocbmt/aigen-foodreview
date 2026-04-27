@@ -89,7 +89,7 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
 
         # Remove classification head → get features
         self.image_encoder.classifier = nn.Identity()
-        image_dim = 768
+        image_dim = 2048
 
         # Memory dim
         memory_dim = text_dim + image_dim
