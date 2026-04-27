@@ -289,8 +289,8 @@ for epoch in range(1, EPOCHS):
                 "val/precision": prec,
                 "val/recall": rec,
                 "val/macro_f1_score": macro_f1,
-                "val/macro_f1_score": micro_f1,
-                "val/macro_f1_score": samples_f1,
+                "val/micro_f1_score": micro_f1,
+                "val/sample_f1_score": samples_f1,
                 "val/hamming_loss": hamming,
                 "lr": optimiser.param_groups[0]['lr']
             })

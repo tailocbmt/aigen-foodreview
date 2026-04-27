@@ -69,7 +69,7 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
         fusion_type="add"
     ):
         super().__init__(
-            feature_dim=1536,
+            feature_dim=2816,
             out_dim=out_dim,
             use_memory=use_memory,
             memory_size=memory_size,
