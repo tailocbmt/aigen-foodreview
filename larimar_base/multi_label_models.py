@@ -83,7 +83,7 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
         # Image encoder (Hugging Face)
         self.image_encoder = ResNetForImageClassification.from_pretrained(
             "microsoft/resnet-50",
-            num_labels=2,
+            num_labels=out_dim,
             ignore_mismatched_sizes=True
         )
 
@@ -240,6 +240,20 @@ class FakeNewsMultimodalWMemoryCoAttention(MemoryAugmentedDetector):
             memory_mode=memory_mode,
             fusion_type=fusion_type
         )
+        # Text encoder
+        self.text_encoder = BertModel.from_pretrained("bert-base-uncased")
+        self.text_dim = self.text_encoder.config.hidden_size  # 768
+
+        # Image encoder (Hugging Face)
+        self.image_encoder = ResNetForImageClassification.from_pretrained(
+            "microsoft/resnet-50",
+            num_labels=out_dim,
+            ignore_mismatched_sizes=True
+        )
+
+        # Remove classification head → get features
+        self.image_encoder.classifier = nn.Identity()
+        self.image_dim = 2048
 
         # Project to same dimension for co-attention
         self.text_proj = nn.Linear(self.text_dim, fusion_dim)
