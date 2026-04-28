@@ -230,7 +230,7 @@ class FakeNewsMultimodalWMemoryCoAttention(MemoryAugmentedDetector):
             proj_dim: int = 256,
             num_heads: int = 8,
             attn_dropout: float = 0.5,
-            fusion_dim: int = 512):
+            fusion_dim: int = 256):
 
         super().__init__(
             feature_dim=proj_dim * 2,
