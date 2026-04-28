@@ -268,7 +268,7 @@ class FakeNewsMultimodalWMemoryCoAttention(MemoryAugmentedDetector):
 
         # Fusion classifier
         self.classifier = nn.Sequential(
-            nn.Linear(fusion_dim * 2, 512),
+            nn.Linear(fusion_dim * 4, 512),
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(512, out_dim)
