@@ -219,7 +219,7 @@ class FakeNewsMultimodalCoAttention(FakeNewsMultimodal):
         return combined
 
 
-class FakeNewsMultimodalWMemoryCoAttention(FakeNewsMultimodal):
+class FakeNewsMultimodalWMemoryCoAttention(MemoryAugmentedDetector):
     def __init__(
             self,
             out_dim: int = 2,
