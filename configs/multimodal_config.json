@@ -2,6 +2,7 @@
  "seed": 42,
   "model_name": "clip",
   "mode": "w/ mem",
+  "use_memory": "linear",
   "MAX_LENGTH": 77,
   "dataset": "evons_multimodal",
   "train_file": "./evons_data/train_multilabel.csv",
