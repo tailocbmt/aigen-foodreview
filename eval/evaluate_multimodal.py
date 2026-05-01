@@ -81,7 +81,7 @@ elif model_name == 'fakenews':
     elif MODEL_MODE == "w/ mem":
         model = FakeNewsMultimodalWMemory(out_dim=output_dim)
     elif MODEL_MODE == "w/ coatt":
-        model = FakeNewsMultimodalCoAttention(out_dim=output_dim)
+        model = FakeNewsMultimodalCoAttention(output_dim=output_dim)
     elif MODEL_MODE == "w/ coatt + mem":
         model = FakeNewsMultimodalWMemoryCoAttention(out_dim=output_dim)
 elif model_name == 'netsharefusion':
