@@ -177,7 +177,7 @@ class EpisodicMemoryRoPE(nn.Module):
         self.max_positions = 10000
         self.register_buffer(
             "freqs_cis",
-            compute_cis_1d(episode_dim, self.max_positions, rope_theta),
+            self.compute_cis_1d(episode_dim, self.max_positions, rope_theta),
         )
 
     def compute_cis_1d(self, dim: int, seq_len: int, theta: float = 10000.0):
