@@ -23,6 +23,7 @@ with open(config_path, 'r') as file:
 # Extract values into variables
 # Options for model_name: 'clip', 'flava'
 model_name = config.get('model_name', 'clip')
+use_memory = config.get('use_memory', 'linear')
 MODEL_MODE = config.get('mode', "w/o memory")
 # Note: for 'clip', max length should be 77
 dataset = config.get('dataset', 'food_review')
@@ -57,10 +58,11 @@ if model_name == 'clip':
     if MODEL_MODE == "w/o mem":
         model = CLIPDetector(backbone, processor, out_dim=output_dim)
     elif MODEL_MODE == "w/ mem":
-        model = CLIPDetectorWMemory(backbone, processor, out_dim=output_dim)
+        model = CLIPDetectorWMemory(
+            backbone, processor, out_dim=output_dim, use_memory=use_memory)
     elif MODEL_MODE == "w/ coatt + mem":
         model = CLIPDetectorWMemoryCoAttention(
-            backbone, processor, out_dim=output_dim)
+            backbone, processor, out_dim=output_dim, use_memory=use_memory)
 
 elif model_name == 'flava':
     backbone = FlavaModel.from_pretrained("facebook/flava-full")
@@ -69,7 +71,8 @@ elif model_name == 'flava':
     if MODEL_MODE == "w/o mem":
         model = FLAVADetector(backbone, processor, out_dim=output_dim)
     elif MODEL_MODE == "w/ mem":
-        model = FLAVADetectorWMemory(backbone, processor, out_dim=output_dim)
+        model = FLAVADetectorWMemory(
+            backbone, processor, out_dim=output_dim, use_memory=use_memory)
 
 elif model_name == 'fakenews':
     processor = []
@@ -79,11 +82,13 @@ elif model_name == 'fakenews':
     if MODEL_MODE == "w/o mem":
         model = FakeNewsMultimodal(output_dim=output_dim)
     elif MODEL_MODE == "w/ mem":
-        model = FakeNewsMultimodalWMemory(out_dim=output_dim)
+        model = FakeNewsMultimodalWMemory(
+            out_dim=output_dim, use_memory=use_memory)
     elif MODEL_MODE == "w/ coatt":
         model = FakeNewsMultimodalCoAttention(output_dim=output_dim)
     elif MODEL_MODE == "w/ coatt + mem":
-        model = FakeNewsMultimodalWMemoryCoAttention(out_dim=output_dim)
+        model = FakeNewsMultimodalWMemoryCoAttention(
+            out_dim=output_dim, use_memory=use_memory)
 elif model_name == 'netsharefusion':
     backbone = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
     processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch16')
