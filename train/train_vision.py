@@ -19,7 +19,7 @@ except ImportError:
     WANDB_AVAILABLE = False
 
 # CONFIG
-config_path = 'configs/multimodal_mem_config.json'
+config_path = 'configs/multimodal_config.json'
 
 with open(config_path, 'r') as file:
     config = json.load(file)

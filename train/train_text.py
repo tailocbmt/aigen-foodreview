@@ -22,7 +22,7 @@ except ImportError:
 
 # CONFIG
 # Define the path to your config file
-config_path = 'configs/multimodal_mem_config.json'
+config_path = 'configs/multimodal_config.json'
 
 # Open and read the JSON file
 with open(config_path, 'r') as file:
