@@ -4,11 +4,13 @@ from transformers import AutoImageProcessor, ViTForImageClassification, ResNetFo
 import torch
 import os
 import logging
+import numpy as np
 from torch.optim import AdamW
+from modules.utils import multilabel_accuracy
 from torch.optim.lr_scheduler import StepLR
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, hamming_loss
 from torch.utils.data import DataLoader
-from modules.dataset import HintsOfTruthVisionDataset, VisionDataset
+from modules.dataset import HintsOfTruthVisionDataset, EvonsOfflineVisionDataset
 
 try:
     import wandb
@@ -85,11 +87,11 @@ if dataset == "hints_of_truth":
     train = HintsOfTruthVisionDataset(train_file, image_dir, "dev1", tokenizer)
     val = HintsOfTruthVisionDataset(val_file, image_dir, "dev2", tokenizer)
 else:
-    train = VisionDataset(train_file, image_dir, tokenizer)
-    val = VisionDataset(val_file, image_dir, tokenizer)
+    train = EvonsOfflineVisionDataset(train_file, image_dir, tokenizer)
+    val = EvonsOfflineVisionDataset(val_file, image_dir, tokenizer)
 
 train_dataloader = DataLoader(train, BATCH_SIZE, shuffle=True)
-print(f'Loaded Traininig File: {train_file}.')
+print(f'Loaded Training File: {train_file}.')
 val_dataloader = DataLoader(val, BATCH_SIZE, shuffle=False)
 print(f'Loaded Validation File: {val_file}.')
 print('Data loaded.')
@@ -108,16 +110,17 @@ print('Training..')
 count = 0
 for epoch in range(1, EPOCHS + 1):
     model.train()
-    pred_train = []
-    labels_train = []
+    pred_val = []
+    labels_val = []
     train_loss = 0.0
 
     print(f'Epoch: {epoch}')
     for i, batch in enumerate(train_dataloader):
         torch.cuda.empty_cache()
         optimiser.zero_grad()
-        if i % 100 == 0:
+        if i % 1000 == 0:
             print(f'{i}th batch..')
+
         inputs = batch['input'].to(device)
         inputs['pixel_values'] = inputs['pixel_values'].squeeze(1)
 
@@ -126,6 +129,7 @@ for epoch in range(1, EPOCHS + 1):
 
         output = model(**inputs, labels=labels)
         loss = output.loss
+
         loss.backward()
         optimiser.step()
 
@@ -133,8 +137,6 @@ for epoch in range(1, EPOCHS + 1):
 
     avg_train_loss = train_loss / len(train_dataloader)
 
-    pred_val = []
-    labels_val = []
     val_loss = 0.0
 
     model.eval()
@@ -147,71 +149,82 @@ for epoch in range(1, EPOCHS + 1):
 
             output_val = model(**inputs_val)
             loss_val = output_val.loss
+            val_loss += loss_val
 
             output_val = torch.softmax(output_val.logits, dim=-1)
             predictions = torch.argmax(
                 output_val, dim=-1).detach().cpu().numpy().tolist()
+            
             pred_val.extend(predictions)
             labels_val.extend(label_val)
 
-            # val_loss += loss_val
 
-        # avg_val_loss = val_loss / len(val_dataloader)
-        acc = accuracy_score(labels_val, pred_val)
-        prec = precision_score(labels_val, pred_val, zero_division=0)
-        rec = recall_score(labels_val, pred_val, zero_division=0)
-        f1 = f1_score(labels_val, pred_val, zero_division=0)
+        avg_val_loss = val_loss / len(val_dataloader)
+        # Convert to numpy for comprehensive metrics calculation
+        y_true = np.array(labels_val)
+        y_pred = np.array(pred_val)
+
+        acc = accuracy_score(y_true, y_pred)
+        multi_acc = multilabel_accuracy(y_true, y_pred)
+        prec = precision_score(y_true, y_pred, average='macro')
+        rec = recall_score(y_true, y_pred, average='macro')
+        macro_f1 = f1_score(y_true, y_pred, average="macro")
+        micro_f1 = f1_score(y_true, y_pred, average="micro")
+        samples_f1 = f1_score(y_true, y_pred, average="samples")
+        hamming = hamming_loss(y_true, y_pred)
 
         logging.info(
-            f'Epoch: {epoch}, '
-            f'Train Loss: {avg_train_loss},'
-            f'Val Acc: {acc}, '
-            f'Precision: {prec}, Recall: {rec}, F1: {f1}, '
-            f'LR: {optimiser.param_groups[0]["lr"]}, Batch Size: {BATCH_SIZE}.'
-        )
-
+            f'Epoch: {epoch}, Accuracy: {acc}, LR: {LR}, Batch Size: {BATCH_SIZE}.')
         print(f'# Train Loss: {avg_train_loss}')
-
-        # print(f'# Val Loss: {avg_val_loss}')
+        print(f'# Val Loss: {avg_val_loss}')
         print(f'# Accuracy: {acc}')
+        print(f'# Multilabel Accuracy: {multi_acc}')
         print(f'# Precision: {prec}')
         print(f'# Recall: {rec}')
-        print(f'# F1-score: {f1}')
+        print(f'# F1-score Macro: {macro_f1}')
+        print(f'# F1-score Micro: {micro_f1}')
+        print(f'# F1-score Sample: {samples_f1}')
+        print(f'# Hamming loss: {hamming}')
 
         if use_wandb and WANDB_AVAILABLE:
             wandb.log({
                 "epoch": epoch,
                 "train/loss": avg_train_loss,
-                # "val/loss": avg_val_loss,
+                "val/loss": avg_val_loss,
                 "val/accuracy": acc,
+                "val/multi_accuracy": multi_acc,
                 "val/precision": prec,
                 "val/recall": rec,
-                "val/f1_score": f1,
+                "val/macro_f1_score": macro_f1,
+                "val/micro_f1_score": micro_f1,
+                "val/sample_f1_score": samples_f1,
+                "val/hamming_loss": hamming,
                 "lr": optimiser.param_groups[0]['lr']
             })
 
-        if acc > best_acc:
-            best_acc = acc
-            save_path = os.path.join(output_dir, f'weight-{epoch}')
-            model.save_pretrained(save_path)
-            tokenizer.save_pretrained(save_path)
+        if macro_f1 > best_acc:
+            best_acc = macro_f1
+            save_path = os.path.join(output_dir, f'weight-{epoch}.pt')
+
+            torch.save(model.state_dict(), save_path)
             print('Saved model.')
 
             if use_wandb and WANDB_AVAILABLE:
                 wandb.log({
+                    "best_macro_f1": best_acc,
                     "best_val_accuracy": best_acc,
                     "best_epoch": epoch
                 })
+                wandb.save(save_path)
+
             count = 0
         else:
             count += 1
 
-        if count == EARLY_STOP:
+        if count == 10:
             print(f'Stopping at epoch: {epoch}')
             break
 
-    scheduler.step()
-    print()
 
 if use_wandb and WANDB_AVAILABLE:
     wandb.finish()

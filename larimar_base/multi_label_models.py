@@ -2,11 +2,42 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import BertModel
-from transformers import ResNetForImageClassification
+from transformers import ResNetForImageClassification, BertForSequenceClassification
 from larimar_base.base_models import BaseDetector, MemoryAugmentedDetector
 from larimar_base.utils import DctCNN, PositionalWiseFeedForward, multimodal_fusion_layer
 
 
+class FakeNewsSeparate(BaseDetector):
+    def __init__(self, text_weights_dir, image_weights_dir, output_dim: int = 2):
+        super().__init__()
+
+        # Text encoder
+        self.text_dim = BertForSequenceClassification.from_pretrained(
+            text_weights_dir)
+
+        # Image encoder (Hugging Face)
+        self.image_encoder = ResNetForImageClassification.from_pretrained(
+            image_weights_dir, num_labels=output_dim)
+
+    def forward(self, inputs):
+        images = inputs['pixel_values']
+        input_ids = inputs['input_ids']
+        attention_mask = inputs['attention_mask']
+        # Text
+        text_outputs = self.text_encoder(
+            input_ids=input_ids, attention_mask=attention_mask)
+
+        # Image
+        image_outputs = self.image_encoder(images)
+
+        # Extract the logits from the model outputs
+        text_logits = text_outputs.logits
+        image_logits = image_outputs.logits
+
+        logits = torch.cat((text_logits, image_logits), dim=1)
+        
+        return logits
+    
 class FakeNewsMultimodal(BaseDetector):
     def __init__(self, output_dim: int = 2):
         super().__init__()

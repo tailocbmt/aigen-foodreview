@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score, hamming_loss, precision_score, recal
 from torch.utils.data import DataLoader, Subset
 from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, HintsOfTruthMultimodalDataset, MultimodalDataset
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
-from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, NetShareFusionCLIP
+from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, FakeNewsSeparate, NetShareFusionCLIP
 from modules.utils import multilabel_accuracy
 
 # CONFIG
@@ -96,10 +96,22 @@ elif model_name == 'netsharefusion':
     model = NetShareFusionCLIP(
         backbone=backbone,
         num_labels=output_dim)
+elif model_name == 'fakenews_separate':
+    text_weights_dir = ""
+    image_weights_dir = ""
+    text_weights = sorted(os.listdir(text_weights_dir))[-1]
+    image_weights = sorted(os.listdir(image_weights_dir))[-1]
+
+    model = FakeNewsSeparate(
+        os.path.join(text_weights_dir, text_weights), 
+        os.path.join(image_weights_dir, image_weights), 
+        output_dim=output_dim)
 else:
     pass
 
-model.load_state_dict(torch.load(weights_dir))
+if model_name != 'fakenews_separate':
+    model.load_state_dict(torch.load(weights_dir))
+
 model = model.to(device)
 print(f'Model {model_name} loaded at weights: {weights}.')
 

@@ -1,15 +1,19 @@
 import json
-
+import numpy as np
+from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer, BertForSequenceClassification
 from transformers import GPTNeoForSequenceClassification
 import torch
 import os
 import logging
 from torch.optim import AdamW
+from modules.utils import multilabel_accuracy
 from torch.optim.lr_scheduler import StepLR
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from torch.utils.data import DataLoader
-from modules.dataset import HintsOfTruthTextDataset, TextDataset
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, hamming_loss
+from torch.utils.data import DataLoader, Subset
+
+# Note: Added EvonsTextDataset assumption based on your multimodal structure
+from modules.dataset import EvonsOfflineTextDataset, HintsOfTruthTextDataset
 try:
     import wandb
     WANDB_AVAILABLE = True
@@ -55,6 +59,9 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 available_models = ['bert', 'gpt']
 best_acc = 0
 
+# Create output directory if needed
+os.makedirs(output_dir, exist_ok=True)
+
 # MODEL SELECTION
 if model_name == 'bert':
     model = BertForSequenceClassification.from_pretrained("bert-base-uncased")
@@ -69,9 +76,6 @@ else:
     pass
 model = model.to(device)
 print(f'Model {model_name} loaded.')
-
-# Create output directory if needed
-os.makedirs(output_dir, exist_ok=True)
 
 # Initialize wandb
 if use_wandb and WANDB_AVAILABLE:
@@ -93,11 +97,11 @@ if dataset == "hints_of_truth":
     val = HintsOfTruthTextDataset(
         val_file, "dev2", tokenizer, MAX_LENGTH)
 else:
-    train = TextDataset(train_file, tokenizer, MAX_LENGTH)
-    val = TextDataset(val_file, tokenizer, MAX_LENGTH)
+    train = EvonsOfflineTextDataset(train_file, tokenizer, MAX_LENGTH)
+    val = EvonsOfflineTextDataset(val_file, tokenizer, MAX_LENGTH)
 
 train_dataloader = DataLoader(train, BATCH_SIZE, shuffle=True)
-print(f'Loaded Traininig File: {train_file}.')
+print(f'Loaded Training File: {train_file}.')
 val_dataloader = DataLoader(val, BATCH_SIZE, shuffle=False)
 print(f'Loaded Validation File: {val_file}.')
 print('Data loaded.')
@@ -124,7 +128,7 @@ for epoch in range(1, EPOCHS):
     for i, batch in enumerate(train_dataloader):
         torch.cuda.empty_cache()
         optimiser.zero_grad()
-        if i % 100 == 0:
+        if i % 1000 == 0:
             print(f'{i}th batch..')
 
         inputs = batch['input'].to(device)
@@ -155,6 +159,9 @@ for epoch in range(1, EPOCHS):
             attention_mask_val = inputs_val['attention_mask'].squeeze(1)
             label_val = batchv['label'].numpy().tolist()
 
+            # Pass labels for validation loss evaluation
+            labels_val_tensor = torch.tensor(label_val).to(device)
+            
             output_val = model(input_ids=input_ids_val,
                                attention_mask=attention_mask_val)
 
@@ -169,20 +176,31 @@ for epoch in range(1, EPOCHS):
             labels_val.extend(label_val)
 
         avg_val_loss = val_loss / len(val_dataloader)
-        acc = accuracy_score(pred_val, labels_val)
-        prec = precision_score(pred_val, labels_val)
-        rec = recall_score(pred_val, labels_val)
-        f1 = f1_score(pred_val, labels_val)
+        # Convert to numpy for comprehensive metrics calculation
+        y_true = np.array(labels_val)
+        y_pred = np.array(pred_val)
+
+        acc = accuracy_score(y_true, y_pred)
+        multi_acc = multilabel_accuracy(y_true, y_pred)
+        prec = precision_score(y_true, y_pred, average='macro')
+        rec = recall_score(y_true, y_pred, average='macro')
+        macro_f1 = f1_score(y_true, y_pred, average="macro")
+        micro_f1 = f1_score(y_true, y_pred, average="micro")
+        samples_f1 = f1_score(y_true, y_pred, average="samples")
+        hamming = hamming_loss(y_true, y_pred)
 
         logging.info(
             f'Epoch: {epoch}, Accuracy: {acc}, LR: {LR}, Batch Size: {BATCH_SIZE}.')
         print(f'# Train Loss: {avg_train_loss}')
         print(f'# Val Loss: {avg_val_loss}')
         print(f'# Accuracy: {acc}')
+        print(f'# Multilabel Accuracy: {multi_acc}')
         print(f'# Precision: {prec}')
         print(f'# Recall: {rec}')
-        print(f'# F1-score: {f1}')
-        print(f'# Accuracy: {acc}')
+        print(f'# F1-score Macro: {macro_f1}')
+        print(f'# F1-score Micro: {micro_f1}')
+        print(f'# F1-score Sample: {samples_f1}')
+        print(f'# Hamming loss: {hamming}')
 
         if use_wandb and WANDB_AVAILABLE:
             wandb.log({
@@ -190,20 +208,26 @@ for epoch in range(1, EPOCHS):
                 "train/loss": avg_train_loss,
                 "val/loss": avg_val_loss,
                 "val/accuracy": acc,
+                "val/multi_accuracy": multi_acc,
                 "val/precision": prec,
                 "val/recall": rec,
-                "val/f1_score": f1,
+                "val/macro_f1_score": macro_f1,
+                "val/micro_f1_score": micro_f1,
+                "val/sample_f1_score": samples_f1,
+                "val/hamming_loss": hamming,
                 "lr": optimiser.param_groups[0]['lr']
             })
 
-        if acc > best_acc:
-            best_acc = acc
-            save_path = os.path.join(output_dir, f'weight-{epoch}')
-            model.save_pretrained(save_path)
+        if macro_f1 > best_acc:
+            best_acc = macro_f1
+            save_path = os.path.join(output_dir, f'weight-{epoch}.pt')
+
+            torch.save(model.state_dict(), save_path)
             print('Saved model.')
 
             if use_wandb and WANDB_AVAILABLE:
                 wandb.log({
+                    "best_macro_f1": best_acc,
                     "best_val_accuracy": best_acc,
                     "best_epoch": epoch
                 })
@@ -213,13 +237,9 @@ for epoch in range(1, EPOCHS):
         else:
             count += 1
 
-        if count == 5:
+        if count == 10:
             print(f'Stopping at epoch: {epoch}')
             break
-    # step lr decay after each epoch
-    scheduler.step()
-
-    print()
 
 if use_wandb and WANDB_AVAILABLE:
     wandb.finish()

@@ -476,6 +476,77 @@ class EvonsOnlineMultimodalDataset(Dataset):
         )
 
 
+class EvonsOfflineTextDataset(Dataset):
+    def __init__(self, file, processor, max_length):
+        super().__init__()
+        self.data = pd.read_csv(file)
+
+        self.tokenizer = processor
+        self.max_length = max_length
+
+    def __len__(self):
+        return len(self.data)
+
+    def _build_text(self, item):
+        title = "" if pd.isna(item["title"]) else str(item["title"])
+        description = "" if pd.isna(
+            item["description"]) else str(item["description"])
+
+        if title and description:
+            return f"{title} {description}"
+        return title or description
+    
+    def __getitem__(self, index):
+        item = self.data.iloc[index]
+
+        text = self._build_text(item)
+
+        label = int(item["label_text"])
+
+        if self.max_length:
+            encoded_input = self.tokenizer(
+                text,
+                return_tensors="pt",
+                max_length=self.max_length,
+                truncation=True,
+                padding="max_length"
+            )
+        else:
+            encoded_input = self.tokenizer(text, return_tensors="pt")
+
+        return {
+            "input": encoded_input,
+            "label": label,
+        }
+    
+class EvonsOfflineVisionDataset(Dataset):
+    def __init__(self, file, image_dir, processor, max_length):
+        super().__init__()
+        self.data = pd.read_csv(file)
+
+        self.image_dir = image_dir
+        self.processor = processor
+        self.max_length = max_length
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        item = self.data.iloc[index]
+
+        image_rel_path = item["image_path"]
+        image_path = os.path.join(self.image_dir, image_rel_path)
+
+        image = Image.open(image_path).convert("RGB")
+        inputs = self.processor(image, return_tensors="pt")
+
+        labels = int(item["label_image"])
+
+        return {
+            "input": inputs,
+            "label": labels,
+        }
+        
 class EvonsOfflineMultimodalDataset(Dataset):
     def __init__(self, file, image_dir, processor, max_length):
         super().__init__()
