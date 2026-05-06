@@ -401,7 +401,7 @@ class CLIPDetectorWMemoryCoAttention(MemoryAugmentedDetector):
         return fused
 
 
-class NetShareFusionCLIP(nn.Module):
+class NetShareFusionCLIP(BaseDetector):
     def __init__(
         self,
             backbone,
