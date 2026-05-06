@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score, f1_score, hamming_loss, precision_sc
 from torch.utils.data import DataLoader, Subset
 from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, MultimodalDataset, HintsOfTruthMultimodalDataset
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
-from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, NetShareFusionCLIP
+from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, FakeNewsSeparate, NetShareFusionCLIP
 import torch.nn as nn
 from modules.utils import multilabel_accuracy
 try:
@@ -58,7 +58,7 @@ if config.get("api_key"):
     os.environ["WANDB_API_KEY"] = config["api_key"]
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-available_models = ['clip', 'flava', 'fakenews', 'netsharefusion']
+available_models = ['clip', 'flava', 'fakenews', 'netsharefusion', 'fakenews_separate']
 best_acc = 0
 
 # Create output directory if needed
@@ -129,6 +129,16 @@ elif model_name == 'netsharefusion':
     model = NetShareFusionCLIP(
         backbone=backbone,
         num_labels=output_dim)
+elif model_name == 'fakenews_separate':
+
+    processor = []
+    processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
+    processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
+    
+    model = FakeNewsSeparate(
+        "", 
+        "", 
+        output_dim=output_dim)
 else:
     pass
 

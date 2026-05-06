@@ -34,7 +34,7 @@ image_dir = config.get('image_dir', '')
 BATCH_SIZE = 512
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-available_models = ['clip', 'flava', 'fakenews', 'netsharefusion']
+available_models = ['clip', 'flava', 'fakenews', 'netsharefusion', 'fakenews_separate']
 best_acc = 0
 
 # MODEL SELECTION
@@ -102,6 +102,10 @@ elif model_name == 'fakenews_separate':
     text_weights = sorted(os.listdir(text_weights_dir))[-1]
     image_weights = sorted(os.listdir(image_weights_dir))[-1]
 
+    processor = []
+    processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
+    processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
+    
     model = FakeNewsSeparate(
         os.path.join(text_weights_dir, text_weights), 
         os.path.join(image_weights_dir, image_weights), 

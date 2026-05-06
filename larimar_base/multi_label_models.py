@@ -8,13 +8,17 @@ from larimar_base.utils import DctCNN, PositionalWiseFeedForward, multimodal_fus
 
 
 class FakeNewsSeparate(BaseDetector):
-    def __init__(self, text_weights_dir, image_weights_dir, output_dim: int = 2):
+    def __init__(self, text_weights_dir: str = "", image_weights_dir: str = "", output_dim: int = 2):
         super().__init__()
 
+        if text_weights_dir == "":
+            text_weights_dir = "bert-base-uncased"
+        if image_weights_dir != "":
+            image_weights_dir = "microsoft/resnet-50"
+        
         # Text encoder
         self.text_dim = BertForSequenceClassification.from_pretrained(
-            text_weights_dir)
-
+                text_weights_dir, num_labels=output_dim)
         # Image encoder (Hugging Face)
         self.image_encoder = ResNetForImageClassification.from_pretrained(
             image_weights_dir, num_labels=output_dim)
