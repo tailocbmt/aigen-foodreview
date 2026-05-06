@@ -34,7 +34,7 @@ image_dir = config.get('image_dir', '')
 BATCH_SIZE = 512
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-available_models = ['clip', 'flava', 'fakenews']
+available_models = ['clip', 'flava', 'fakenews', 'netsharefusion']
 best_acc = 0
 
 # MODEL SELECTION

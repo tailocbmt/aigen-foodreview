@@ -58,7 +58,7 @@ if config.get("api_key"):
     os.environ["WANDB_API_KEY"] = config["api_key"]
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-available_models = ['clip', 'flava', 'fakenews']
+available_models = ['clip', 'flava', 'fakenews', 'netsharefusion']
 best_acc = 0
 
 # Create output directory if needed
