@@ -186,7 +186,6 @@ for epoch in range(1, EPOCHS):
         rec = recall_score(y_true, y_pred, average='macro')
         macro_f1 = f1_score(y_true, y_pred, average="macro")
         micro_f1 = f1_score(y_true, y_pred, average="micro")
-        samples_f1 = f1_score(y_true, y_pred, average="samples")
         hamming = hamming_loss(y_true, y_pred)
 
         logging.info(
@@ -199,7 +198,6 @@ for epoch in range(1, EPOCHS):
         print(f'# Recall: {rec}')
         print(f'# F1-score Macro: {macro_f1}')
         print(f'# F1-score Micro: {micro_f1}')
-        print(f'# F1-score Sample: {samples_f1}')
         print(f'# Hamming loss: {hamming}')
 
         if use_wandb and WANDB_AVAILABLE:
@@ -213,7 +211,6 @@ for epoch in range(1, EPOCHS):
                 "val/recall": rec,
                 "val/macro_f1_score": macro_f1,
                 "val/micro_f1_score": micro_f1,
-                "val/sample_f1_score": samples_f1,
                 "val/hamming_loss": hamming,
                 "lr": optimiser.param_groups[0]['lr']
             })
