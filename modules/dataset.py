@@ -520,13 +520,12 @@ class EvonsOfflineTextDataset(Dataset):
         }
     
 class EvonsOfflineVisionDataset(Dataset):
-    def __init__(self, file, image_dir, processor, max_length):
+    def __init__(self, file, image_dir, processor):
         super().__init__()
         self.data = pd.read_csv(file)
 
         self.image_dir = image_dir
         self.processor = processor
-        self.max_length = max_length
 
     def __len__(self):
         return len(self.data)
