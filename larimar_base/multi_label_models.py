@@ -19,7 +19,7 @@ class FakeNewsSeparate(BaseDetector):
 
         # Image encoder (Hugging Face)
         self.image_encoder = ResNetForImageClassification.from_pretrained(
-            "microsoft/resnet-50", num_labels=output_dim, ignore_mismatched_sizes=True)
+            "microsoft/resnet-50", ignore_mismatched_sizes=True)
         
         # 4. Inject your dynamically found latest weights
         if text_weights_dir != "":
