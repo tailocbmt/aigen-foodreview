@@ -18,10 +18,10 @@ class FakeNewsSeparate(BaseDetector):
         
         # Text encoder
         self.text_dim = BertForSequenceClassification.from_pretrained(
-                text_weights_dir, num_labels=output_dim)
+                text_weights_dir, ignore_mismatched_sizes=True)
         # Image encoder (Hugging Face)
         self.image_encoder = ResNetForImageClassification.from_pretrained(
-            image_weights_dir, num_labels=output_dim)
+            image_weights_dir, ignore_mismatched_sizes=True)
 
     def forward(self, inputs):
         images = inputs['pixel_values']
