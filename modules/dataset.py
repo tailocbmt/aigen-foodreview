@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import torch
+from torchvision import transforms
 from torch.utils.data import Dataset
 from datasets import load_dataset
 import pandas as pd
@@ -642,8 +643,17 @@ class EvonsOfflineMultimodalWDctDataset(Dataset):
         self.processor = processor
         self.max_length = max_length
 
-        self.transform_image = transform_image
-        self.transform_dct = transform_dct
+        if transform_image is None:
+            self.transform_image = transforms.Compose([
+                    transforms.Resize((224,224)),
+                    transforms.ToTensor(),
+                ])
+        
+        if transform_dct is None:
+            self.transform_dct = transforms.Compose([
+                    transforms.Resize((224,224)),
+                    transforms.ToTensor()
+            ])
 
     def __len__(self):
         return len(self.data)

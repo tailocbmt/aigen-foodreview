@@ -8,7 +8,7 @@ import logging
 from torch.optim import AdamW
 from sklearn.metrics import accuracy_score, f1_score, hamming_loss, precision_score, recall_score
 from torch.utils.data import DataLoader, Subset
-from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, MultimodalDataset, HintsOfTruthMultimodalDataset
+from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, MultimodalDataset, HintsOfTruthMultimodalDataset, EvonsOfflineMultimodalWDctDataset
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
 from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, FakeNewsSeparate, NetShareFusionCLIP
 import torch.nn as nn
@@ -123,11 +123,11 @@ elif model_name == 'fakenews':
         model = FakeNewsMultimodalWMemoryCoAttention(
             out_dim=output_dim, use_memory=use_memory)
 elif model_name == 'netsharefusion':
-    backbone = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
-    processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch16')
+    processor = []
+    processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
+    processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
 
     model = NetShareFusionCLIP(
-        backbone=backbone,
         num_labels=output_dim)
 elif model_name == 'fakenews_separate':
 
@@ -182,6 +182,11 @@ elif dataset == "evons":
     )
     train = Subset(full_data, train_idx)
     val = Subset(full_data, val_idx)
+elif dataset == "fakenews":
+    train = EvonsOfflineMultimodalDataset(
+        train_file, image_dir, processor, MAX_LENGTH)
+    val = EvonsOfflineMultimodalDataset(
+        val_file, image_dir, processor, MAX_LENGTH)
 else:
     train = EvonsOfflineMultimodalDataset(
         train_file, image_dir, processor, MAX_LENGTH)

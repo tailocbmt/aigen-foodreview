@@ -420,7 +420,6 @@ class CLIPDetectorWMemoryCoAttention(MemoryAugmentedDetector):
 class NetShareFusionCLIP(BaseDetector):
     def __init__(
         self,
-            backbone,
             model_dim: int = 256,
             drop_and_BN: str = "drop-BN",
             num_labels: int = 2,
@@ -436,13 +435,24 @@ class NetShareFusionCLIP(BaseDetector):
         self.drop_and_BN = drop_and_BN
 
         # CLIP text + image encoder
-        self.clip = backbone
-        clip_dim = self.clip.config.projection_dim  # usually 512
+        self.text_encoder = BertModel.from_pretrained("bert-base-uncased")
+        text_dim = self.text_encoder.config.hidden_size  # 768
 
-        self.linear_text = nn.Linear(clip_dim, model_dim)
+        # Image encoder (Hugging Face)
+        self.image_encoder = ResNetForImageClassification.from_pretrained(
+            "microsoft/resnet-50",
+            num_labels=num_labels,
+            ignore_mismatched_sizes=True
+        )
+
+        # Remove classification head → get features
+        self.image_encoder.classifier = nn.Identity()
+        image_dim = 2048
+
+        self.linear_text = nn.Linear(text_dim, model_dim)
         self.bn_text = nn.BatchNorm1d(model_dim)
 
-        self.linear_image = nn.Linear(clip_dim, model_dim)
+        self.linear_image = nn.Linear(image_dim, model_dim)
         self.bn_vgg = nn.BatchNorm1d(model_dim)
 
         self.dropout = nn.Dropout(dropout)
@@ -502,15 +512,14 @@ class NetShareFusionCLIP(BaseDetector):
         input_ids = inputs['input_ids']
         attention_mask = inputs['attention_mask']
 
-        # CLIP text + image features
-        clip_outputs = self.clip(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            pixel_values=pixel_values
-        )
+        text_outputs = self.text_encoder(
+            input_ids=input_ids, attention_mask=attention_mask)
+        text_output = text_outputs.last_hidden_state[:, 0, :]
 
-        text_output = clip_outputs.text_embeds    # [B, clip_dim]
-        image_output = clip_outputs.image_embeds  # [B, clip_dim]
+        # Image
+        image_outputs = self.image_encoder(pixel_values)
+        image_features = image_outputs.logits  # now 2048-dim
+        image_output = torch.flatten(image_features, start_dim=1)
 
         # Text feature
         text_output = F.relu(self.linear_text(text_output))
