@@ -19,7 +19,7 @@ class FakeNewsSeparate(BaseDetector):
 
         # Image encoder (Hugging Face)
         self.image_encoder = ResNetForImageClassification.from_pretrained(
-            "microsoft/resnet-50", ignore_mismatched_sizes=True)
+            "microsoft/resnet-50", num_labels=output_dim, ignore_mismatched_sizes=True)
         
         # 4. Inject your dynamically found latest weights
         if text_weights_dir != "":
@@ -41,10 +41,15 @@ class FakeNewsSeparate(BaseDetector):
         image_outputs = self.image_encoder(images)
 
         # Extract the logits from the model outputs
-        text_logits = text_outputs.logits
-        image_logits = image_outputs.logits
-
-        logits = torch.cat((text_logits, image_logits), dim=1)
+        text_val = torch.softmax(text_outputs.logits, dim=-1)
+        text_pred = torch.argmax(
+            text_val, dim=-1).detach().cpu().numpy().tolist()
+        
+        image_val = torch.softmax(image_outputs.logits, dim=-1)
+        image_pred = torch.argmax(
+            image_val, dim=-1).detach().cpu().numpy().tolist()
+        
+        logits = torch.cat((text_pred, image_pred), dim=1)
         
         return logits
     
