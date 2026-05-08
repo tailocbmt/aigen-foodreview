@@ -13,7 +13,7 @@ class FakeNewsSeparate(BaseDetector):
 
         if text_weights_dir == "":
             text_weights_dir = "bert-base-uncased"
-        if image_weights_dir != "":
+        if image_weights_dir == "":
             image_weights_dir = "microsoft/resnet-50"
         
         # Text encoder
