@@ -14,7 +14,6 @@ class FakeNewsSeparate(BaseDetector):
         # Text encoder
         self.text_encoder = BertForSequenceClassification.from_pretrained(
             "bert-base-uncased", # Replace with the base model you used
-            num_labels=output_dim,
             ignore_mismatched_sizes=True
         )
 
