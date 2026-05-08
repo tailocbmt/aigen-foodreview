@@ -188,9 +188,9 @@ elif dataset == "fakenews":
     val = EvonsOfflineMultimodalDataset(
         val_file, image_dir, processor, MAX_LENGTH)
 else:
-    train = EvonsOfflineMultimodalDataset(
+    train = EvonsOfflineMultimodalWDctDataset(
         train_file, image_dir, processor, MAX_LENGTH)
-    val = EvonsOfflineMultimodalDataset(
+    val = EvonsOfflineMultimodalWDctDataset(
         val_file, image_dir, processor, MAX_LENGTH)
 
 train_dataloader = DataLoader(train, BATCH_SIZE, shuffle=True)
