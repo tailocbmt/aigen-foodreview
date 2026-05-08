@@ -146,10 +146,11 @@ for epoch in range(1, EPOCHS + 1):
             inputs_val = batchv['input'].to(device)
             inputs_val['pixel_values'] = inputs_val['pixel_values'].squeeze(1)
             label_val = batchv['label'].numpy().tolist()
+            labels = batchv['label'].to(device)
 
-            output_val = model(**inputs_val)
+            output_val = model(**inputs_val, labels=labels)
             loss_val = output_val.loss
-            val_loss += loss_val
+            val_loss += loss_val.item()
 
             output_val = torch.softmax(output_val.logits, dim=-1)
             predictions = torch.argmax(

@@ -163,7 +163,7 @@ for epoch in range(1, EPOCHS):
             labels_val_tensor = torch.tensor(label_val).to(device)
             
             output_val = model(input_ids=input_ids_val,
-                               attention_mask=attention_mask_val)
+                               attention_mask=attention_mask_val, labels=labels_val_tensor)
 
             loss_val = output.loss
             val_loss += loss_val.item()
