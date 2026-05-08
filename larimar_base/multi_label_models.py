@@ -531,6 +531,15 @@ class NetShareFusionCLIP(BaseDetector):
 
         # DCT feature
         dct_out = self.dct_img(dct_img)
+        # 2. Reshape back to (Batch, Channels, Height, Width) 
+        # Assuming out_channels=64 and a square spatial dimension (64x64)
+        dct_out = dct_out.view(-1, 64, 64, 64)
+        # 3. Pool down to an 8x8 spatial size
+        dct_out = F.adaptive_avg_pool2d(dct_out, (8, 8))
+        
+        # 4. Flatten back out (64 * 8 * 8 = 4096)
+        dct_out = torch.flatten(dct_out, start_dim=1)
+
         dct_out = F.relu(self.linear_dct(dct_out))
         dct_out = self.drop_BN_layer(dct_out, part="dct")
 
