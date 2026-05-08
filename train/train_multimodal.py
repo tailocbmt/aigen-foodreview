@@ -81,7 +81,7 @@ if model_name not in available_models:
     raise ValueError(f'{model_name} not in {available_models}.')
 
 output_dim = 1
-if dataset == 'evons_multimodal':
+if 'evons_multimodal' in dataset:
     output_dim = 2
 
 if model_name == 'clip':
