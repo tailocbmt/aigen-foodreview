@@ -99,8 +99,8 @@ elif model_name == 'netsharefusion':
 elif model_name == 'fakenews_separate':
     text_weights_dir = ""
     image_weights_dir = ""
-    text_weights = sorted(os.listdir(text_weights_dir))[-1]
-    image_weights = sorted(os.listdir(image_weights_dir))[-1]
+    text_weights = sorted(os.listdir(text_weights_dir), key=lambda x: int(x.split('-')[1].split('.')[0]))[-1]
+    image_weights = sorted(os.listdir(image_weights_dir), key=lambda x: int(x.split('-')[1].split('.')[0]))[-1]
 
     processor = []
     processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
