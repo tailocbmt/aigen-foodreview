@@ -42,13 +42,14 @@ class FakeNewsSeparate(BaseDetector):
 
         # Extract the logits from the model outputs
         text_val = torch.softmax(text_outputs.logits, dim=-1)
-        text_pred = torch.argmax(
-            text_val, dim=-1).detach().cpu().numpy().tolist()
+        # 1. Remove .tolist() and add .unsqueeze(1) to make shape [B, 1]
+        text_pred = torch.argmax(text_val, dim=-1).unsqueeze(1)
         
         image_val = torch.softmax(image_outputs.logits, dim=-1)
-        image_pred = torch.argmax(
-            image_val, dim=-1).detach().cpu().numpy().tolist()
+        # 2. Remove .tolist() and add .unsqueeze(1) to make shape [B, 1]
+        image_pred = torch.argmax(image_val, dim=-1).unsqueeze(1)
         
+        # 3. Now you can safely concatenate them into a [B, 2] tensor
         logits = torch.cat((text_pred, image_pred), dim=1)
         
         return logits
