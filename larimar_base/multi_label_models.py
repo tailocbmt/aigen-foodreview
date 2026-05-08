@@ -11,17 +11,24 @@ class FakeNewsSeparate(BaseDetector):
     def __init__(self, text_weights_dir: str = "", image_weights_dir: str = "", output_dim: int = 2):
         super().__init__()
 
-        if text_weights_dir == "":
-            text_weights_dir = "bert-base-uncased"
-        if image_weights_dir == "":
-            image_weights_dir = "microsoft/resnet-50"
-        
         # Text encoder
-        self.text_dim = BertForSequenceClassification.from_pretrained(
-                text_weights_dir, ignore_mismatched_sizes=True)
+        self.text_encoder = BertForSequenceClassification.from_pretrained(
+            "bert-base-uncased", # Replace with the base model you used
+            num_labels=output_dim,
+            ignore_mismatched_sizes=True
+        )
+
         # Image encoder (Hugging Face)
         self.image_encoder = ResNetForImageClassification.from_pretrained(
-            image_weights_dir, ignore_mismatched_sizes=True)
+            "microsoft/resnet-50", num_labels=output_dim, ignore_mismatched_sizes=True)
+        
+        # 4. Inject your dynamically found latest weights
+        if text_weights_dir != "":
+            text_state_dict = torch.load(text_weights_dir)
+            self.text_encoder.load_state_dict(text_state_dict)
+        if image_weights_dir != "":
+            image_state_dict = torch.load(image_weights_dir)
+            self.image_encoder.load_state_dict(image_state_dict)
 
     def forward(self, inputs):
         images = inputs['pixel_values']
