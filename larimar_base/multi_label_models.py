@@ -417,22 +417,28 @@ class CLIPDetectorWMemoryCoAttention(MemoryAugmentedDetector):
         return fused
 
 
-class NetShareFusionCLIP(BaseDetector):
+class NetShareFusionCLIP(MemoryAugmentedDetector):
     def __init__(
         self,
-            model_dim: int = 256,
-            drop_and_BN: str = "drop-BN",
-            num_labels: int = 2,
-            num_layers: int = 2,
-            num_heads: int = 8,
-            ffn_dim: int = 2048,
-            dropout: float = 0.5
+        use_memory: bool=True,
+        memory_size: int=512,
+        memory_mode: str="read_write",
+        fusion_type:str = "add",
+        model_dim: int = 256,
+        num_labels: int = 2,
+        dropout: float = 0.5
     ):
-
-        super().__init__()
+        
+        super().__init__(
+            feature_dim=3072,
+            out_dim=num_labels,
+            use_memory=use_memory,
+            memory_size=memory_size,
+            memory_mode=memory_mode,
+            fusion_type=fusion_type
+        )
 
         self.model_dim = model_dim
-        self.drop_and_BN = drop_and_BN
 
         # CLIP text + image encoder
         self.text_encoder = BertModel.from_pretrained("bert-base-uncased")
@@ -449,14 +455,6 @@ class NetShareFusionCLIP(BaseDetector):
         self.image_encoder.classifier = nn.Identity()
         image_dim = 2048
 
-        self.linear_text = nn.Linear(text_dim, model_dim)
-        self.bn_text = nn.BatchNorm1d(model_dim)
-
-        self.linear_image = nn.Linear(image_dim, model_dim)
-        self.bn_vgg = nn.BatchNorm1d(model_dim)
-
-        self.dropout = nn.Dropout(dropout)
-
         # DCT image branch stays the same
         self.dct_img = DctCNN(
             model_dim,
@@ -469,44 +467,22 @@ class NetShareFusionCLIP(BaseDetector):
             out_channels=64
         )
 
-        self.linear_dct = nn.Linear(4096, model_dim)
-        self.bn_dct = nn.BatchNorm1d(model_dim)
+        self.linear_dct = nn.Sequential(
+            nn.Linear(4096, model_dim),
+            nn.ReLU(),
+            nn.Dropout(0.3)
+        )
 
-        # Multimodal fusion stays the same
-        self.fusion_layers = nn.ModuleList([
-            multimodal_fusion_layer(model_dim, num_heads, ffn_dim, dropout)
-            for _ in range(num_layers)
-        ])
+        memory_dim = text_dim + image_dim + model_dim
+        # Fusion classifier
+        self.classifier = nn.Sequential(
+            nn.Linear(memory_dim, 512),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(512, num_labels)
+        )
 
-        # Classifier stays similar
-        self.linear1 = nn.Linear(model_dim, 35)
-        self.bn_1 = nn.BatchNorm1d(35)
-        self.linear2 = nn.Linear(35, num_labels)
-
-    def drop_BN_layer(self, x, part="dct"):
-        if part == "dct":
-            bn = self.bn_dct
-        elif part == "vgg":
-            bn = self.bn_vgg
-        elif part == "bert":
-            bn = self.bn_text
-
-        if self.drop_and_BN == "drop-BN":
-            x = self.dropout(x)
-            x = bn(x)
-        elif self.drop_and_BN == "BN-drop":
-            x = bn(x)
-            x = self.dropout(x)
-        elif self.drop_and_BN == "drop-only":
-            x = self.dropout(x)
-        elif self.drop_and_BN == "BN-only":
-            x = bn(x)
-        elif self.drop_and_BN == "none":
-            pass
-
-        return x
-
-    def forward(self, inputs, attn_mask=None):
+    def feature_extractor(self, inputs):
         pixel_values = inputs['pixel_values']
         dct_img = inputs['dct_img']
         input_ids = inputs['input_ids']
@@ -521,14 +497,6 @@ class NetShareFusionCLIP(BaseDetector):
         image_features = image_outputs.logits  # now 2048-dim
         image_output = torch.flatten(image_features, start_dim=1)
 
-        # Text feature
-        text_output = F.relu(self.linear_text(text_output))
-        text_output = self.drop_BN_layer(text_output, part="bert")
-
-        # Image feature from CLIP image encoder
-        image_output = F.relu(self.linear_image(image_output))
-        image_output = self.drop_BN_layer(image_output, part="vgg")
-
         # DCT feature
         dct_out = self.dct_img(dct_img)
         # 2. Reshape back to (Batch, Channels, Height, Width) 
@@ -536,25 +504,9 @@ class NetShareFusionCLIP(BaseDetector):
         dct_out = dct_out.view(-1, 64, 64, 64)
         # 3. Pool down to an 8x8 spatial size
         dct_out = F.adaptive_avg_pool2d(dct_out, (8, 8))
-        
-        # 4. Flatten back out (64 * 8 * 8 = 4096)
         dct_out = torch.flatten(dct_out, start_dim=1)
+        dct_out = self.linear_dct(dct_out)
+        
+        combined = torch.cat((text_output, image_output, dct_out), dim=1)
 
-        dct_out = F.relu(self.linear_dct(dct_out))
-        dct_out = self.drop_BN_layer(dct_out, part="dct")
-
-        # Stage 1: CLIP image feature ↔ DCT feature
-        output = image_output
-        for fusion_layer in self.fusion_layers:
-            output = fusion_layer(output, dct_out, attn_mask)
-
-        # Stage 2: fused visual feature ↔ CLIP text feature
-        for fusion_layer in self.fusion_layers:
-            output = fusion_layer(output, text_output, attn_mask)
-
-        # Classifier
-        output = F.relu(self.linear1(output))
-        output = self.dropout(output)
-        logits = self.linear2(output)
-
-        return logits
+        return combined
