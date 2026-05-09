@@ -90,13 +90,6 @@ elif model_name == 'fakenews':
         model = FakeNewsMultimodalWMemoryCoAttention(
             out_dim=output_dim, use_memory=use_memory)
 elif model_name == 'netsharefusion':
-    backbone = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
-    processor = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch16')
-
-    model = NetShareFusionCLIP(
-        backbone=backbone,
-        num_labels=output_dim)
-elif model_name == 'netsharefusion':
     processor = []
     processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
     processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
