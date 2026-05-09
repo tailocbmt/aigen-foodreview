@@ -128,7 +128,8 @@ elif model_name == 'netsharefusion':
     processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
 
     model = NetShareFusionCLIP(
-        num_labels=output_dim)
+        num_labels=output_dim,
+        use_memory=use_memory)
 elif model_name == 'fakenews_separate':
 
     processor = []

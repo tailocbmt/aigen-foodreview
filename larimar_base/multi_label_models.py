@@ -420,10 +420,10 @@ class CLIPDetectorWMemoryCoAttention(MemoryAugmentedDetector):
 class NetShareFusionCLIP(MemoryAugmentedDetector):
     def __init__(
         self,
-        use_memory: bool=True,
+        use_memory: str="linear",
         memory_size: int=512,
         memory_mode: str="read_write",
-        fusion_type:str = "add",
+        fusion_type: str = "add",
         model_dim: int = 256,
         num_labels: int = 2,
         dropout: float = 0.5
@@ -457,7 +457,7 @@ class NetShareFusionCLIP(MemoryAugmentedDetector):
 
         # DCT image branch stays the same
         self.dct_img = DctCNN(
-            model_dim,
+            self.model_dim,
             dropout,
             in_channel=128,
             branch1_channels=[64],
@@ -468,12 +468,12 @@ class NetShareFusionCLIP(MemoryAugmentedDetector):
         )
 
         self.linear_dct = nn.Sequential(
-            nn.Linear(4096, model_dim),
+            nn.Linear(4096, self.model_dim),
             nn.ReLU(),
             nn.Dropout(0.3)
         )
 
-        memory_dim = text_dim + image_dim + model_dim
+        memory_dim = text_dim + image_dim + self.model_dim
         # Fusion classifier
         self.classifier = nn.Sequential(
             nn.Linear(memory_dim, 512),
