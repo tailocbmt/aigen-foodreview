@@ -6,7 +6,7 @@ import json
 from transformers import AutoImageProcessor, AutoTokenizer, CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
 from sklearn.metrics import accuracy_score, hamming_loss, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader, Subset
-from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, HintsOfTruthMultimodalDataset, MultimodalDataset
+from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, EvonsOfflineMultimodalWDctDataset, HintsOfTruthMultimodalDataset, MultimodalDataset
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
 from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, FakeNewsSeparate, NetShareFusionCLIP
 from modules.utils import multilabel_accuracy
@@ -48,7 +48,7 @@ weights = weights[-1]
 weights_dir = os.path.join(output_dir, weights)
 
 output_dim = 1
-if dataset == 'evons_multimodal':
+if 'evons_multimodal' in dataset:
     output_dim = 2
 
 if model_name == 'clip':
@@ -95,6 +95,13 @@ elif model_name == 'netsharefusion':
 
     model = NetShareFusionCLIP(
         backbone=backbone,
+        num_labels=output_dim)
+elif model_name == 'netsharefusion':
+    processor = []
+    processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
+    processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
+
+    model = NetShareFusionCLIP(
         num_labels=output_dim)
 elif model_name == 'fakenews_separate':
     text_weights_dir = ""
@@ -150,10 +157,13 @@ elif dataset == "evons":
         random_state=42
     )
     test = Subset(full_data, test_idx)
-else:
+elif dataset == "fakenews":
     test = EvonsOfflineMultimodalDataset(
         test_file, image_dir, processor, MAX_LENGTH)
-
+else:
+    test = EvonsOfflineMultimodalWDctDataset(
+        test_file, image_dir, processor, MAX_LENGTH)
+    
 test_dataloader = DataLoader(test, BATCH_SIZE)
 print(f'Loaded Testing File: {test_file}.')
 
