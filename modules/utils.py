@@ -1,6 +1,6 @@
 import os
 from PIL import Image
-from albumentations.augmentations.functional import crop
+import albumentations as A
 from albumentations import (
     Compose, DualTransform, HorizontalFlip, VerticalFlip,
     ShiftScaleRotate, CenterCrop, RandomCrop, PadIfNeeded,
@@ -456,7 +456,7 @@ class RandomSizedPatchExtraction(DualTransform):
         self.max_patch_ratio = max_patch_ratio
 
     def apply(self, img, x_min=0, y_min=0, x_max=0, y_max=0, **params):
-        return crop(img, x_min, y_min, x_max, y_max)
+        return A.crop(img, x_min, y_min, x_max, y_max)
 
     def get_params(self):
         return {"x_min": 0, "x_max": 0, "y_min": 0, "y_max": 0}
