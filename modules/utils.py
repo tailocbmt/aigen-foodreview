@@ -551,6 +551,7 @@ class DatasetTransforms:
                 value=0
             ),
             CenterCrop(height=self.input_size, width=self.input_size),
+            A.Resize(height=224, width=224),
             ToTensorV2(),
         ])
 
@@ -569,5 +570,7 @@ class DatasetTransforms:
                 value=0
             ),
             CenterCrop(height=self.input_size, width=self.input_size),
+            A.Resize(height=224, width=224),
+
             ToTensorV2(),
         ])
