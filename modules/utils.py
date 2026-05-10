@@ -529,7 +529,7 @@ class DatasetTransforms:
 
             # Random cropping for more patches
             RandomCrop(height=self.input_size, width=self.input_size, p=0.3),
-
+            A.Resize(height=224, width=224),
             # Convert to tensor
             ToTensorV2()
 
