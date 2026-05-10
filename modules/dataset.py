@@ -681,7 +681,7 @@ class EvonsOfflineMultimodalWDctDataset(Dataset):
 
         # Standard image tensor for image encoder
         if self.transform_image is not None:
-            image_tensor = self.transform_image(image)
+            image_tensor = self.transform_image(image=image)['image']
             inputs["image"] = image_tensor
 
         # DCT image tensor for frequency branch
