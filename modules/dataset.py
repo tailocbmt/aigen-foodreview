@@ -14,7 +14,7 @@ import pandas as pd
 import os
 from PIL import Image
 from larimar_base.utils import process_dct_img
-from utils import DatasetTransforms
+from modules.utils import DatasetTransforms
 
 
 @dataclass
