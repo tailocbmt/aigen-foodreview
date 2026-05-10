@@ -6,6 +6,8 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Dict, Optional
 
+import numpy as np
+
 import torch
 from torchvision import transforms
 from torch.utils.data import Dataset
@@ -681,7 +683,8 @@ class EvonsOfflineMultimodalWDctDataset(Dataset):
 
         # Standard image tensor for image encoder
         if self.transform_image is not None:
-            image_tensor = self.transform_image(image=image)['image']
+            image_np = np.array(image)  # Shape: (H, W, C), dtype: uint8
+            image_tensor = self.transform_image(image=image_np)['image']
             inputs["image"] = image_tensor
 
         # DCT image tensor for frequency branch
