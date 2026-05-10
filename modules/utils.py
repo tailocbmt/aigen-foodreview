@@ -1,3 +1,13 @@
+import os
+from PIL import Image
+from albumentations.augmentations.functional import crop
+from albumentations import (
+    Compose, DualTransform, HorizontalFlip, VerticalFlip,
+    ShiftScaleRotate, CenterCrop, RandomCrop, PadIfNeeded,
+    ToTensorV2, Normalize
+)
+from torch.utils.data import Dataset, DataLoader
+import random
 import torch
 import numpy as np
 import textstat
@@ -337,3 +347,227 @@ def image_metrics(image_path):
     }
 
     return metrics
+
+
+# ============================================================================
+# CUSTOM AUGMENTATIONS FOR AI DETECTION
+# ============================================================================
+
+
+class PreserveHighFrequencies(DualTransform):
+    """Amplifies high-frequency components to enhance forensic artifacts"""
+
+    def __init__(self, strength=0.3, kernel_size=5, always_apply=False, p=0.5):
+        super().__init__(always_apply, p)
+        self.strength = strength
+        self.kernel_size = kernel_size
+
+    def apply(self, img, **params):
+        img_float = img.astype(np.float32) / 255.0
+        blurred = cv2.GaussianBlur(
+            img_float, (self.kernel_size, self.kernel_size), 1.0)
+        high_freq = img_float - blurred
+        enhanced = img_float + high_freq * self.strength
+        enhanced = np.clip(enhanced * 255, 0, 255).astype(np.uint8)
+        return enhanced
+
+    def get_transform_init_args_names(self):
+        return ("strength", "kernel_size")
+
+
+class ExtractFrequencyBands(DualTransform):
+    """Separate image into different frequency bands for multi-scale analysis"""
+
+    def __init__(self, bands=[(3, 5), (9, 11)], always_apply=False, p=0.3):
+        super().__init__(always_apply, p)
+        self.bands = bands
+
+    def apply(self, img, **params):
+        img_float = img.astype(np.float32)
+        result = []
+
+        for low, high in self.bands:
+            # Apply bandpass filtering
+            low_pass = cv2.GaussianBlur(img_float, (low*2+1, low*2+1), low)
+            high_pass = cv2.GaussianBlur(img_float, (high*2+1, high*2+1), high)
+            band = low_pass - high_pass
+            band = np.clip(band + 128, 0, 255).astype(np.uint8)
+            result.append(band)
+
+        # Stack frequency bands
+        return np.concatenate([img] + result, axis=2) if len(result) > 0 else img
+
+    def get_transform_init_args_names(self):
+        return ("bands",)
+
+
+class IsotropicResize(DualTransform):
+    """Resize image while preserving aspect ratio"""
+
+    def __init__(self, max_side, interpolation_down=cv2.INTER_AREA,
+                 interpolation_up=cv2.INTER_NEAREST, always_apply=False, p=1):
+        super(IsotropicResize, self).__init__(always_apply, p)
+        self.max_side = max_side
+        self.interpolation_down = interpolation_down
+        self.interpolation_up = interpolation_up
+
+    def apply(self, img, **params):
+        return self.isotropically_resize_image(
+            img, size=self.max_side,
+            interpolation_down=self.interpolation_down,
+            interpolation_up=self.interpolation_up
+        )
+
+    def apply_to_mask(self, img, **params):
+        return self.apply(img, interpolation_down=cv2.INTER_NEAREST,
+                          interpolation_up=cv2.INTER_NEAREST, **params)
+
+    @staticmethod
+    def isotropically_resize_image(img, size, interpolation_down=cv2.INTER_AREA,
+                                   interpolation_up=cv2.INTER_NEAREST):
+        h, w = img.shape[:2]
+
+        if max(w, h) == size:
+            return img
+        if w > h:
+            scale = size / w
+            h = h * scale
+            w = size
+        else:
+            scale = size / h
+            w = w * scale
+            h = size
+
+        interpolation = interpolation_up if scale > 1 else interpolation_down
+        resized = cv2.resize(img, (int(w), int(h)),
+                             interpolation=interpolation)
+        return resized
+
+    def get_transform_init_args_names(self):
+        return ("max_side", "interpolation_down", "interpolation_up")
+
+
+class RandomSizedPatchExtraction(DualTransform):
+    """Extract random patches to focus on local forensic patterns"""
+
+    def __init__(self, min_patch_ratio=0.3, max_patch_ratio=0.7, always_apply=False, p=0.5):
+        super().__init__(always_apply, p)
+        self.min_patch_ratio = min_patch_ratio
+        self.max_patch_ratio = max_patch_ratio
+
+    def apply(self, img, x_min=0, y_min=0, x_max=0, y_max=0, **params):
+        return crop(img, x_min, y_min, x_max, y_max)
+
+    def get_params(self):
+        return {"x_min": 0, "x_max": 0, "y_min": 0, "y_max": 0}
+
+    def get_transform_init_args_names(self):
+        return ("min_patch_ratio", "max_patch_ratio")
+
+
+# ============================================================================
+# TRANSFORM CLASS FOR AI-GENERATED IMAGE DETECTION
+# ============================================================================
+
+class DatasetTransforms:
+    """Specialized transforms pipeline for AI-generated image detection"""
+
+    def __init__(self, input_size=224, mode='train'):
+        """
+        Args:
+            input_size: Target image size (default: 224)
+            mode: 'train', 'val', or 'test'
+        """
+        self.input_size = input_size
+        self.mode = mode
+
+    def get_transforms(self):
+        """Get the appropriate transform pipeline based on mode"""
+        if self.mode == 'train':
+            return self._get_train_transforms()
+        elif self.mode == 'val':
+            return self._get_val_transforms()
+        else:  # test
+            return self._get_test_transforms()
+
+    def _get_train_transforms(self):
+        """Training transforms - augmentations that preserve forensic evidence"""
+        return Compose([
+
+            # Geometric augmentations only (safe for AI detection)
+            HorizontalFlip(p=0.5),
+            ShiftScaleRotate(
+                shift_limit=0.05,
+                scale_limit=0.05,
+                rotate_limit=10,
+                border_mode=cv2.BORDER_CONSTANT,
+                p=0.3
+            ),
+
+            # Random patch extraction - forces model to focus on local patterns
+            RandomSizedPatchExtraction(
+                min_patch_ratio=0.5,
+                max_patch_ratio=0.9,
+                p=0.3
+            ),
+
+            # Resize while preserving aspect ratio
+            IsotropicResize(
+                max_side=self.input_size,
+                interpolation_down=cv2.INTER_AREA,      # Best for downscaling
+                # Preserves pixel patterns when upscaling
+                interpolation_up=cv2.INTER_NEAREST
+            ),
+
+            # Pad to exact size if needed
+            PadIfNeeded(
+                min_height=self.input_size,
+                min_width=self.input_size,
+                border_mode=cv2.BORDER_CONSTANT,
+                value=0
+            ),
+
+            # Random cropping for more patches
+            RandomCrop(height=self.input_size, width=self.input_size, p=0.3),
+
+            # Convert to tensor
+            ToTensorV2()
+
+        ])
+
+    def _get_val_transforms(self):
+        """Validation transforms - minimal preprocessing"""
+        return Compose([
+            # No augmentations, just resize and center crop
+            IsotropicResize(
+                max_side=self.input_size,
+                interpolation_down=cv2.INTER_AREA,
+                interpolation_up=cv2.INTER_NEAREST
+            ),
+            PadIfNeeded(
+                min_height=self.input_size,
+                min_width=self.input_size,
+                border_mode=cv2.BORDER_CONSTANT,
+                value=0
+            ),
+            CenterCrop(height=self.input_size, width=self.input_size),
+            ToTensorV2(),
+        ])
+
+    def _get_test_transforms(self):
+        """Test/inference transforms - simple and fast"""
+        return Compose([
+            IsotropicResize(
+                max_side=self.input_size,
+                interpolation_down=cv2.INTER_AREA,
+                interpolation_up=cv2.INTER_NEAREST
+            ),
+            PadIfNeeded(
+                min_height=self.input_size,
+                min_width=self.input_size,
+                border_mode=cv2.BORDER_CONSTANT,
+                value=0
+            ),
+            CenterCrop(height=self.input_size, width=self.input_size),
+            ToTensorV2(),
+        ])

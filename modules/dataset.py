@@ -14,6 +14,7 @@ import pandas as pd
 import os
 from PIL import Image
 from larimar_base.utils import process_dct_img
+from utils import DatasetTransforms
 
 
 @dataclass
@@ -496,7 +497,7 @@ class EvonsOfflineTextDataset(Dataset):
         if title and description:
             return f"{title} {description}"
         return title or description
-    
+
     def __getitem__(self, index):
         item = self.data.iloc[index]
 
@@ -519,7 +520,8 @@ class EvonsOfflineTextDataset(Dataset):
             "input": encoded_input,
             "label": label,
         }
-    
+
+
 class EvonsOfflineVisionDataset(Dataset):
     def __init__(self, file, image_dir, processor):
         super().__init__()
@@ -546,7 +548,8 @@ class EvonsOfflineVisionDataset(Dataset):
             "input": inputs,
             "label": labels,
         }
-        
+
+
 class EvonsOfflineMultimodalDataset(Dataset):
     def __init__(self, file, image_dir, processor, max_length):
         super().__init__()
@@ -642,17 +645,23 @@ class EvonsOfflineMultimodalWDctDataset(Dataset):
         self.image_dir = image_dir
         self.processor = processor
         self.max_length = max_length
+        if 'val' in file:
+            self.mode = 'val'
+        elif 'train' in file:
+            self.mode = 'train'
+        else:
+            self.mode = 'test'
 
         if transform_image is None:
-            self.transform_image = transforms.Compose([
-                    transforms.Resize((224,224)),
-                    transforms.ToTensor(),
-                ])
-        
+            transform_pipeline = DatasetTransforms(
+                input_size=224,
+                mode=self.mode
+            )
+            self.transform_image = transform_pipeline.get_transforms()
         if transform_dct is None:
             self.transform_dct = transforms.Compose([
-                    transforms.Resize((224,224)),
-                    transforms.ToTensor()
+                transforms.Resize((224, 224)),
+                transforms.ToTensor()
             ])
 
     def __len__(self):
