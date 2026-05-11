@@ -560,6 +560,19 @@ class EvonsOfflineMultimodalDataset(Dataset):
         self.image_dir = image_dir
         self.processor = processor
         self.max_length = max_length
+        if 'val' in file:
+            self.mode = 'val'
+        elif 'train' in file:
+            self.mode = 'train'
+        else:
+            self.mode = 'test'
+
+        if self.transform_image is None:
+            transform_pipeline = DatasetTransforms(
+                input_size=224,
+                mode=self.mode
+            )
+            self.transform_image = transform_pipeline.get_transforms()
 
     def __len__(self):
         return len(self.data)
@@ -574,6 +587,11 @@ class EvonsOfflineMultimodalDataset(Dataset):
 
         image = Image.open(image_path).convert("RGB")
         inputs = self.tokenize(text=[text], images=[image])
+
+        if self.transform_image is not None:
+            image_np = np.array(image)  # Shape: (H, W, C), dtype: uint8
+            image_tensor = self.transform_image(image=image_np)['image']
+            inputs["pixel_values"] = image_tensor
 
         labels = torch.tensor(
             [
