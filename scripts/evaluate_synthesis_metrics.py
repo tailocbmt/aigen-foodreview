@@ -1,5 +1,5 @@
 import os
-
+import json
 import pandas as pd
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from modules.utils import text_metrics, perplexity_gptneo, image_metrics
@@ -11,7 +11,7 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
 model.eval()
 
-df = pd.read_csv("evons_data/evons.csv")
+df = pd.read_csv("evons_data/evons_exp.csv")
 df = df.rename(columns={
     "qwen_rewritten_title": "qwen_old_rewritten_title",
     "qwen_rewritten_description": "qwen_old_rewritten_description",
