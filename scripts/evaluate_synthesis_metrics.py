@@ -10,6 +10,7 @@ MODEL_NAME = "EleutherAI/gpt-neo-125M"  # or "EleutherAI/gpt-neo-1.3B"
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
+model = model.to("cuda")  # Move model to GPU
 model.eval()
 
 llama3_df = pd.read_csv(f"{DATA_DIR}/evons_exp_llama3.csv")

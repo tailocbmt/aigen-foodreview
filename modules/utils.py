@@ -59,6 +59,7 @@ def text_metrics(text):
 def perplexity_gptneo(tokenizer, model, text):
     inputs = tokenizer(text, return_tensors="pt",
                        truncation=True, max_length=2048)
+    inputs = {k: v.to("cuda") for k, v in inputs.items()}  # Move inputs to GPU
 
     with torch.no_grad():
         outputs = model(**inputs, labels=inputs["input_ids"])
