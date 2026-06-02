@@ -11,7 +11,11 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
 model.eval()
 
+llama3_df = pd.read_csv("evons_data/evons_exp_llama3.csv")
 df = pd.read_csv("evons_data/evons_exp.csv")
+df['llama3_rewritten_title'] = llama3_df['llama3_rewritten_title']
+df['llama3_rewritten_description'] = llama3_df['llama3_rewritten_description']
+
 df = df.rename(columns={
     "qwen_rewritten_title": "qwen_old_rewritten_title",
     "qwen_rewritten_description": "qwen_old_rewritten_description",
