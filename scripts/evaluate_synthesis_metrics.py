@@ -70,10 +70,10 @@ for _, row in df.iterrows():
 
     # ---- REAL ----
     real_title_m = text_metrics(real_title)
-    real_title_m["PPL"] = perplexity_gptneo(real_title, tokenizer, model)
+    real_title_m["PPL"] = perplexity_gptneo(tokenizer, model, real_title)
 
     real_des_m = text_metrics(real_des)
-    real_des_m["PPL"] = perplexity_gptneo(real_des, tokenizer, model)
+    real_des_m["PPL"] = perplexity_gptneo(tokenizer, model, real_des)
 
     real_img_m = image_metrics(real_img_path)
 
@@ -96,10 +96,10 @@ for _, row in df.iterrows():
         gen_des = str(row[des_col])
 
         gen_title_m = text_metrics(gen_title)
-        gen_title_m["PPL"] = perplexity_gptneo(gen_title, tokenizer, model)
+        gen_title_m["PPL"] = perplexity_gptneo(tokenizer, model, gen_title)
 
         gen_des_m = text_metrics(gen_des)
-        gen_des_m["PPL"] = perplexity_gptneo(gen_des, tokenizer, model)
+        gen_des_m["PPL"] = perplexity_gptneo(tokenizer, model, gen_des)
 
         if model_name not in row_metrics["generated"]:
             row_metrics["generated"][model_name] = {}
@@ -122,5 +122,5 @@ for _, row in df.iterrows():
     results.append(row_metrics)
 
 # ---- SAVE JSON ----
-with open("metrics_output.json", "w") as f:
+with open("evons_metrics_output.json", "w") as f:
     json.dump(results, f, indent=2)
