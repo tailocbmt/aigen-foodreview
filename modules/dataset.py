@@ -769,3 +769,78 @@ class EvonsOfflineMultimodalWDctDataset(Dataset):
                 truncation=True,
                 padding="max_length",
             )
+
+
+class AIGenFoodMultimodalDataset(Dataset):
+    def __init__(self, file, image_dir, processor, max_length):
+        super().__init__()
+        self.data = pd.read_csv(file)
+
+        self.image_dir = image_dir
+        self.processor = processor
+        self.max_length = max_length
+        if 'val' in file:
+            self.mode = 'val'
+        elif 'train' in file:
+            self.mode = 'train'
+        else:
+            self.mode = 'test'
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        item = self.data.iloc[index]
+
+        text = str(item["text"])
+
+        image_path = os.path.join(self.image_dir, item["ID"])
+
+        image = Image.open(image_path).convert("RGB")
+        inputs = self.tokenize(text=[text], images=[image])
+
+        labels = torch.tensor(
+            [
+                int(item["label"]),
+                int(item["label"]),
+            ],
+            dtype=torch.float
+        )
+
+        return {
+            "inputs": inputs,
+            "label": labels,
+        }
+
+    def tokenize(self, text: list, images: list):
+        if isinstance(self.processor, list):
+            image_inputs = self.processor[0](
+                images=images, return_tensors="pt")
+
+            if self.max_length:
+                text_inputs = self.processor[1](
+                    text,
+                    return_tensors="pt",
+                    max_length=self.max_length,
+                    truncation=True,
+                    padding="max_length",
+                )
+            else:
+                text_inputs = self.processor[1](
+                    text,
+                    return_tensors="pt",
+                )
+
+            return {
+                **image_inputs,
+                **text_inputs,
+            }
+        else:
+            return self.processor(
+                text=text,
+                images=images,
+                return_tensors="pt",
+                max_length=self.max_length,
+                truncation=True,
+                padding="max_length",
+            )

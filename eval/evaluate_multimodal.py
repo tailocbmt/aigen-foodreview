@@ -6,7 +6,7 @@ import json
 from transformers import AutoImageProcessor, AutoTokenizer, CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
 from sklearn.metrics import accuracy_score, hamming_loss, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader, Subset
-from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, EvonsOfflineMultimodalWDctDataset, HintsOfTruthMultimodalDataset, MultimodalDataset
+from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, EvonsOfflineMultimodalWDctDataset, HintsOfTruthMultimodalDataset, AIGenFoodMultimodalDataset
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
 from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, FakeNewsSeparate, NetShareFusionCLIP
 from modules.utils import multilabel_accuracy
@@ -34,7 +34,8 @@ image_dir = config.get('image_dir', '')
 BATCH_SIZE = 512
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-available_models = ['clip', 'flava', 'fakenews', 'netsharefusion', 'fakenews_separate']
+available_models = ['clip', 'flava', 'fakenews',
+                    'netsharefusion', 'fakenews_separate']
 best_acc = 0
 
 # MODEL SELECTION
@@ -99,16 +100,18 @@ elif model_name == 'netsharefusion':
 elif model_name == 'fakenews_separate':
     text_weights_dir = ""
     image_weights_dir = ""
-    text_weights = sorted(os.listdir(text_weights_dir), key=lambda x: int(x.split('-')[1].split('.')[0]))[-1]
-    image_weights = sorted(os.listdir(image_weights_dir), key=lambda x: int(x.split('-')[1].split('.')[0]))[-1]
+    text_weights = sorted(os.listdir(text_weights_dir),
+                          key=lambda x: int(x.split('-')[1].split('.')[0]))[-1]
+    image_weights = sorted(os.listdir(image_weights_dir),
+                           key=lambda x: int(x.split('-')[1].split('.')[0]))[-1]
 
     processor = []
     processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
     processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
-    
+
     model = FakeNewsSeparate(
-        os.path.join(text_weights_dir, text_weights), 
-        os.path.join(image_weights_dir, image_weights), 
+        os.path.join(text_weights_dir, text_weights),
+        os.path.join(image_weights_dir, image_weights),
         output_dim=output_dim)
 else:
     pass
@@ -153,10 +156,13 @@ elif dataset == "evons":
 elif dataset == "fakenews":
     test = EvonsOfflineMultimodalDataset(
         test_file, image_dir, processor, MAX_LENGTH)
+elif dataset == "foodreview":
+    test = AIGenFoodMultimodalDataset(
+        test_file, image_dir, processor, MAX_LENGTH)
 else:
     test = EvonsOfflineMultimodalWDctDataset(
         test_file, image_dir, processor, MAX_LENGTH)
-    
+
 test_dataloader = DataLoader(test, BATCH_SIZE)
 print(f'Loaded Testing File: {test_file}.')
 
