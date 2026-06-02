@@ -4,15 +4,16 @@ import pandas as pd
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from modules.utils import text_metrics, perplexity_gptneo, image_metrics
 
-IMAGE_OUTPUT_DIR = "evons_qwen_{IMAGE_MODEL_NAME}"
+DATA_DIR = "evons_data"
+IMAGE_OUTPUT_DIR = "{DATA_DIR}/evons_qwen_{IMAGE_MODEL_NAME}"
 MODEL_NAME = "EleutherAI/gpt-neo-125M"  # or "EleutherAI/gpt-neo-1.3B"
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 model = AutoModelForCausalLM.from_pretrained(MODEL_NAME)
 model.eval()
 
-llama3_df = pd.read_csv("evons_data/evons_exp_llama3.csv")
-df = pd.read_csv("evons_data/evons_exp.csv")
+llama3_df = pd.read_csv(f"{DATA_DIR}/evons_exp_llama3.csv")
+df = pd.read_csv(f"{DATA_DIR}/evons_exp.csv")
 df['llama3_rewritten_title'] = llama3_df['llama3_rewritten_title']
 df['llama3_rewritten_description'] = llama3_df['llama3_rewritten_description']
 
@@ -67,7 +68,7 @@ for _, row in df.iterrows():
     real_des = str(row["description"])
 
     real_img_path = os.path.join(
-        "evons_data",
+        DATA_DIR,
         "images",
         row["media_source"],
         row["image_fn"].replace("usas", "usasup"),
