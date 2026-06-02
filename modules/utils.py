@@ -14,6 +14,7 @@ import textstat
 import re
 import cv2
 from copy import deepcopy
+from skimage.segmentation import slic
 
 
 def multilabel_accuracy(targets, preds):
