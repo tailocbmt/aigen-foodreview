@@ -63,6 +63,7 @@ for _, row in df.iterrows():
     real_des = str(row["description"])
 
     real_img_path = os.path.join(
+        "evons_data",
         "images",
         row["media_source"],
         row["image_fn"].replace("usas", "usasup"),
