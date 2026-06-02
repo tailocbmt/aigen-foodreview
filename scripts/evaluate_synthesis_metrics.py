@@ -5,7 +5,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from modules.utils import text_metrics, perplexity_gptneo, image_metrics
 
 DATA_DIR = "evons_data"
-IMAGE_OUTPUT_DIR = "{DATA_DIR}/evons_qwen_{IMAGE_MODEL_NAME}"
+IMAGE_OUTPUT_DIR = "{BASE_DATA_DIR}/evons_qwen_{IMAGE_MODEL_NAME}"
 MODEL_NAME = "EleutherAI/gpt-neo-125M"  # or "EleutherAI/gpt-neo-1.3B"
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
@@ -30,13 +30,13 @@ df = df.rename(columns={
     "z_image_img_path": "z_img_path"
 })
 df["sd_img_path"] = df["sd_img_path"].apply(
-    lambda x: os.path.join(IMAGE_OUTPUT_DIR.format(IMAGE_MODEL_NAME="sd"), x))
+    lambda x: os.path.join(IMAGE_OUTPUT_DIR.format(BASE_DATA_DIR=DATA_DIR, IMAGE_MODEL_NAME="sd"), x))
 df["flux_img_path"] = df["flux_img_path"].apply(
-    lambda x: os.path.join(IMAGE_OUTPUT_DIR.format(IMAGE_MODEL_NAME="flux"), x))
+    lambda x: os.path.join(IMAGE_OUTPUT_DIR.format(BASE_DATA_DIR=DATA_DIR, IMAGE_MODEL_NAME="flux"), x))
 df["z_img_path"] = df["z_img_path"].apply(
-    lambda x: os.path.join(IMAGE_OUTPUT_DIR.format(IMAGE_MODEL_NAME="z_image"), x))
+    lambda x: os.path.join(IMAGE_OUTPUT_DIR.format(BASE_DATA_DIR=DATA_DIR, IMAGE_MODEL_NAME="z_image"), x))
 df["sdxl_img_path"] = df["sdxl_img_path"].apply(
-    lambda x: os.path.join(IMAGE_OUTPUT_DIR.format(IMAGE_MODEL_NAME="sdxl"), x))
+    lambda x: os.path.join(IMAGE_OUTPUT_DIR.format(BASE_DATA_DIR=DATA_DIR, IMAGE_MODEL_NAME="sdxl"), x))
 df = df.drop(columns=["Unnamed: 0"])
 df = df[df["image_fn"] != "mwn5977-t.jpg"]
 
