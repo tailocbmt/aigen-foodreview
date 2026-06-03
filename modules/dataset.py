@@ -794,7 +794,7 @@ class AIGenFoodMultimodalDataset(Dataset):
 
         text = str(item["text"])
 
-        image_path = os.path.join(self.image_dir, item["ID"])
+        image_path = os.path.join(self.image_dir, str(item["ID"])) + '.jpg'
 
         image = Image.open(image_path).convert("RGB")
         inputs = self.tokenize(text=[text], images=[image])
