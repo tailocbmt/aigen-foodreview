@@ -62,8 +62,8 @@ fake_img_cols = [
 
 results = []
 
-for _, row in df.iterrows():
-    row_id = row.index
+for idx, row in df.iterrows():
+    row_id = idx
 
     real_title = str(row["title"])
     real_des = str(row["description"])
