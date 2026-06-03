@@ -49,7 +49,7 @@ weights = weights[-1]
 weights_dir = os.path.join(output_dir, weights)
 
 output_dim = 1
-if 'evons_multimodal' in dataset:
+if 'evons_multimodal' or 'foodreview' in dataset:
     output_dim = 2
 
 if model_name == 'clip':
