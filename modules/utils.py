@@ -337,8 +337,8 @@ def image_metrics(image_path):
         "VPVB": float(vertical_physical_balance),
 
         # Attributes 11–12
-        "HCVC": float(horizontal_color_balance(rgb_float)),
-        "VCVC": float(vertical_color_balance(rgb_float)),
+        "HCVB": float(horizontal_color_balance(rgb_float)),
+        "VCVB": float(vertical_color_balance(rgb_float)),
 
         # Attributes 13–15
         "SD": float(size_difference(mask)),
