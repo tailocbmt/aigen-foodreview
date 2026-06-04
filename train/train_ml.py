@@ -97,15 +97,28 @@ def transform_data(train, val, test):
         missing = set(feature_columns) - set(available_features)
         print(f"Warning: Missing features: {missing}")
 
-    # Extract features for train, val, test
-    X_train = train[available_features].values
+    # Get labels
     y_train = train['label'] if 'label' in train.columns else train['is_fake']
-
-    X_val = val[available_features].values
     y_val = val['label'] if 'label' in val.columns else val['is_fake']
-
-    X_test = test[available_features].values
     y_test = test['label'] if 'label' in test.columns else test['is_fake']
+
+    # Extract features and drop rows with NaN
+    X_train = train[available_features].dropna()
+    y_train = y_train[X_train.index]  # Align labels with dropped rows
+
+    X_val = val[available_features].dropna()
+    y_val = y_val[X_val.index]
+
+    X_test = test[available_features].dropna()
+    y_test = y_test[X_test.index]
+
+    # Print info about dropped rows
+    print(
+        f"Train: {len(train) - len(X_train)} rows dropped, {len(X_train)} remaining")
+    print(
+        f"Val: {len(val) - len(X_val)} rows dropped, {len(X_val)} remaining")
+    print(
+        f"Test: {len(test) - len(X_test)} rows dropped, {len(X_test)} remaining")
 
     # Optional: Scale features for better performance
     scaler = StandardScaler()
