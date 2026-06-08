@@ -82,6 +82,10 @@ for idx, row in df.iterrows():
     real_des_m = text_metrics(real_des)
     real_des_m["PPL"] = perplexity_gptneo(tokenizer, model, real_des)
 
+    combined_real = f"{real_title} {real_des}"
+    combined_real_m = text_metrics(combined_real)
+    combined_real_m["PPL"] = perplexity_gptneo(tokenizer, model, combined_real)
+
     real_img_m = image_metrics(real_img_path)
 
     row_metrics = {
@@ -90,6 +94,7 @@ for idx, row in df.iterrows():
         "real": {
             "title": real_title_m,
             "description": real_des_m,
+            "full_text": combined_real_m,
             "image": real_img_m,
         },
         "generated": {}
@@ -108,11 +113,17 @@ for idx, row in df.iterrows():
         gen_des_m = text_metrics(gen_des)
         gen_des_m["PPL"] = perplexity_gptneo(tokenizer, model, gen_des)
 
+        combined_gen = f"{gen_title} {gen_des}"
+        combined_gen_m = text_metrics(combined_gen)
+        combined_gen_m["PPL"] = perplexity_gptneo(
+            tokenizer, model, combined_gen)
+
         if model_name not in row_metrics["generated"]:
             row_metrics["generated"][model_name] = {}
 
         row_metrics["generated"][model_name]["title"] = gen_title_m
         row_metrics["generated"][model_name]["description"] = gen_des_m
+        row_metrics["generated"][model_name]["full_text"] = combined_gen_m
 
     # ---- GENERATED IMAGES ----
     for gen_img_col in fake_img_cols:
