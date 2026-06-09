@@ -267,7 +267,7 @@ def expand_dataset(
                 row_metric["generated"][fake_text_item["text_generator"]]["full_text"]
             )
             temp_data.update(
-                row_metric["generated"][fake_text_item["image_generator"]]["image"]
+                row_metric["generated"][fake_img_item["image_generator"]]["image"]
             )
 
             rows.append(temp_data)
