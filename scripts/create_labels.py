@@ -264,10 +264,10 @@ def expand_dataset(
                 "is_fake": original_is_fake
             }
             temp_data.update(
-                row_metric["generated"][item["text_generator"]]["full_text"]
+                row_metric["generated"][fake_text_item["text_generator"]]["full_text"]
             )
             temp_data.update(
-                row_metric["generated"][item["image_generator"]]["image"]
+                row_metric["generated"][fake_text_item["image_generator"]]["image"]
             )
 
             rows.append(temp_data)
