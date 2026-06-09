@@ -370,8 +370,12 @@ def pipeline_sklearn(
 
 
 if __name__ == '__main__':
-    path_train = "./aigen_data/train_dataset.csv"
-    path_val = "./aigen_data/val_dataset.csv"
-    path_test = "./aigen_data/test_dataset.csv"
+    # ./aigen_data/train_dataset.csv
+    # ./aigen_data/val_dataset.csv
+    # ./aigen_data/test_dataset.csv
+
+    path_train = "./evons_data/train_multilabel.csv"
+    path_val = "./evons_data/val_multilabel.csv"
+    path_test = "./evons_data/test_multilabel.csv"
     model_name = args.model
     pipeline_sklearn(model_name, path_train, path_val, path_test)
