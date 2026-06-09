@@ -140,5 +140,5 @@ for idx, row in df.iterrows():
     results.append(row_metrics)
 
 # ---- SAVE JSON ----
-with open("evons_metrics_output.json", "w") as f:
+with open("evons_data/evons_metrics_output.json", "w") as f:
     json.dump(results, f, indent=2)

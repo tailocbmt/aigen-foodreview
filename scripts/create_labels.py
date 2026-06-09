@@ -1,12 +1,23 @@
+import json
 import os
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+text_feature_columns = [
+    'ARI', 'DW', 'FR', 'GFI', 'WPS', 'RT', 'PPL',
+]
+image_feature_columns = [
+    # Image features
+    'BRI', 'SAT', 'CLA', 'WAR', 'CON', 'COL', 'SD', 'CD', 'TD',
+    'DD', 'ROT', 'HPVB', 'VPVB', 'HCVB', 'VCVB'
+]
 
 # =========================================================
 # 1) Stratified split by is_fake
 # =========================================================
+
+
 def stratified_split(df, seed=42):
     train_df, temp_df = train_test_split(
         df,
@@ -128,6 +139,7 @@ def sampled_cross_pairs(fake_text_pool, fake_image_pool, max_pairs=None):
 
 def expand_dataset(
     df,
+    metric_df,
     include_all_fake_text_real_image=True,
     include_all_real_text_fake_image=True,
     max_fake_fake_pairs=4
@@ -143,12 +155,14 @@ def expand_dataset(
         real_img = os.path.join('images', row["media_source"], image_fn)
         original_is_fake = row["is_fake"]
 
+        row_metric = metric_df[int(source_id)]
+
         fake_text_pool = build_fake_text_pool(row)
         fake_image_pool = build_fake_image_pool(row)
 
         # 1) real text + real image
         if pd.notna(real_title) and str(real_title).strip() and pd.notna(real_img) and str(real_img).strip():
-            rows.append({
+            temp_data = {
                 "source_id": source_id,
                 "title": real_title,
                 "description": real_des,
@@ -161,13 +175,21 @@ def expand_dataset(
                 "label_text": 0,
                 "label_image": 0,
                 "label": [0, 0],
-                "is_fake": original_is_fake
-            })
+                "is_fake": original_is_fake,
+            }
+            temp_data.update(
+                row_metric["real"]["full_text"]
+            )
+            temp_data.update(
+                row_metric["real"]["image"]
+            )
+
+            rows.append(temp_data)
 
         # 2) all fake texts + real image
         if include_all_fake_text_real_image and pd.notna(real_img) and str(real_img).strip():
             for item in fake_text_pool:
-                rows.append({
+                temp_data = {
                     "source_id": source_id,
                     "title": item["title"],
                     "description": item["description"],
@@ -181,12 +203,20 @@ def expand_dataset(
                     "label_image": 0,
                     "label": [1, 0],
                     "is_fake": original_is_fake
-                })
+                }
+                temp_data.update(
+                    row_metric["generated"][item["text_generator"]]["full_text"]
+                )
+                temp_data.update(
+                    row_metric["real"]["image"]
+                )
+
+                rows.append(temp_data)
 
         # 3) real text + all fake images
         if include_all_real_text_fake_image and pd.notna(real_title) and str(real_title).strip():
             for item in fake_image_pool:
-                rows.append({
+                temp_data = {
                     "source_id": source_id,
                     "title": real_title,
                     "description": real_des,
@@ -200,7 +230,15 @@ def expand_dataset(
                     "label_image": 1,
                     "label": [0, 1],
                     "is_fake": original_is_fake
-                })
+                }
+                temp_data.update(
+                    row_metric["real"]["full_text"]
+                )
+                temp_data.update(
+                    row_metric["generated"][item["image_generator"]]["image"]
+                )
+
+                rows.append(temp_data)
 
         # 4) sampled fake text + fake image pairs
         cross_pairs = sampled_cross_pairs(
@@ -210,7 +248,7 @@ def expand_dataset(
         )
 
         for fake_text_item, fake_img_item in cross_pairs:
-            rows.append({
+            temp_data = {
                 "source_id": source_id,
                 "title": fake_text_item["title"],
                 "description": fake_text_item["description"],
@@ -224,7 +262,15 @@ def expand_dataset(
                 "label_image": 1,
                 "label": [1, 1],
                 "is_fake": original_is_fake
-            })
+            }
+            temp_data.update(
+                row_metric["generated"][item["text_generator"]]["full_text"]
+            )
+            temp_data.update(
+                row_metric["generated"][item["image_generator"]]["image"]
+            )
+
+            rows.append(temp_data)
 
     return pd.DataFrame(rows)
 
@@ -232,10 +278,12 @@ def expand_dataset(
 # =========================================================
 # 3) Full pipeline
 # =========================================================
-def create_multimodal_splits(llama3_csv, input_csv, output_dir=".", seed=42):
+def create_multimodal_splits(llama3_csv, input_csv, metric_json, output_dir=".", seed=42):
     IMAGE_OUTPUT_DIR = "evons_qwen_{IMAGE_MODEL_NAME}"
     llama3_df = pd.read_csv(llama3_csv)
     df = pd.read_csv(input_csv)
+    with open("evons_data/evons_metrics_output.json", 'r', encoding='utf-8') as f:
+        metric_df = json.load(f)
 
     df['llama3_rewritten_title'] = llama3_df['llama3_rewritten_title']
     df['llama3_rewritten_description'] = llama3_df['llama3_rewritten_description']
@@ -302,6 +350,7 @@ def create_multimodal_splits(llama3_csv, input_csv, output_dir=".", seed=42):
     # expand each split
     train_expanded = expand_dataset(
         train_df,
+        metric_df,
         include_all_fake_text_real_image=True,
         include_all_real_text_fake_image=True,
         max_fake_fake_pairs=4
@@ -309,6 +358,7 @@ def create_multimodal_splits(llama3_csv, input_csv, output_dir=".", seed=42):
 
     val_expanded = expand_dataset(
         val_df,
+        metric_df,
         include_all_fake_text_real_image=True,
         include_all_real_text_fake_image=True,
         max_fake_fake_pairs=4
@@ -316,6 +366,7 @@ def create_multimodal_splits(llama3_csv, input_csv, output_dir=".", seed=42):
 
     test_expanded = expand_dataset(
         test_df,
+        metric_df,
         include_all_fake_text_real_image=True,
         include_all_real_text_fake_image=True,
         max_fake_fake_pairs=4
@@ -376,6 +427,7 @@ if __name__ == "__main__":
     train_expanded, val_expanded, test_expanded = create_multimodal_splits(
         llama3_csv="evons_data/evons_exp_llama3.csv",
         input_csv="evons_data/evons_exp.csv",
+        metric_json="evons_metrics_output.json",
         output_dir="evons_data",
         seed=42
     )
