@@ -83,42 +83,7 @@ def multilabel_metrics(y_true, y_pred, dataset_name="Test"):
     }
 
 
-def json_to_custom_csv_pandas(json_file_path, csv_file_path):
-    # Read JSON file
-    with open(json_file_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-
-    # Create rows as per your structure
-    rows = []
-    for row_id, row in enumerate(data):
-        row_metrics = {
-            "id": row_id,
-            "is_fake": row.get('is_fake', ''),
-            "real_title": row.get('real_title_m', ''),
-            "real_description": row.get('real_des_m', ''),
-            "real_full_text": row.get('combined_real_m', ''),
-            "real_image": row.get('real_img_m', ''),
-        }
-
-        for model, model_data in row_metrics["generated"].iterrows():
-            row_metrics[f"{model}_generated_title"] = model_data["title"]
-            row_metrics[f"{model}_generated_description"] = model_data["description"]
-            row_metrics[f"{model}_generated_full_text"] = model_data["full_text"]
-
-    # Create DataFrame
-    df = pd.DataFrame(rows)
-
-    # Save to CSV
-    df.to_csv(csv_file_path, index=False, encoding='utf-8')
-
-    print(f"Converted {len(df)} rows to {csv_file_path}")
-    return df
-
-
 def load_data(path_train, path_val, path_test):
-    if path_train.endswith('.json'):
-        df = json_to_custom_csv_pandas(path_train)
-
     train = pd.read_csv(path_train)
     val = pd.read_csv(path_val)
     test = pd.read_csv(path_test)
@@ -257,7 +222,7 @@ def optimise(model_name: str, X_train, y_train, save):
     model = obj.get('model')
     params = obj.get('params')
     # Use micro F1 for multi-label
-    clf = GridSearchCV(model, params, cv=5, scoring='f1_micro')
+    clf = GridSearchCV(model, params, cv=5, scoring='f1_macro', n_jobs=-1)
     clf.fit(X_train, y_train)
     print('Best estimator: ')
     print(clf.best_estimator_)
