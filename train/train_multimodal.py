@@ -33,6 +33,9 @@ with open(config_path, 'r') as file:
 model_name = config.get('model_name', 'flava')
 use_memory = config.get('use_memory', 'linear')
 MODEL_MODE = config.get('mode', "w/o memory")
+TEXT_BACKBONE = config.get('text_backbone', "bert-base-uncased")
+VISION_BACKBONE = config.get('vision_backbone', "microsoft/resnet-50")
+
 # Note: for 'clip', max length should be 77
 MAX_LENGTH = config.get('MAX_LENGTH', 512)
 # File paths
@@ -58,7 +61,8 @@ if config.get("api_key"):
     os.environ["WANDB_API_KEY"] = config["api_key"]
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-available_models = ['clip', 'flava', 'fakenews', 'netsharefusion', 'fakenews_separate']
+available_models = ['clip', 'flava', 'fakenews',
+                    'netsharefusion', 'fakenews_separate']
 best_acc = 0
 
 # Create output directory if needed
@@ -109,8 +113,9 @@ elif model_name == 'flava':
 
 elif model_name == 'fakenews':
     processor = []
-    processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
-    processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
+    # microsoft/resnet-50 + bert-base-uncased
+    processor.append(AutoImageProcessor.from_pretrained(VISION_BACKBONE))
+    processor.append(AutoTokenizer.from_pretrained(TEXT_BACKBONE))
 
     if MODEL_MODE == "w/o mem":
         model = FakeNewsMultimodal(output_dim=output_dim)
@@ -124,8 +129,8 @@ elif model_name == 'fakenews':
             out_dim=output_dim, use_memory=use_memory)
 elif model_name == 'netsharefusion':
     processor = []
-    processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
-    processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
+    processor.append(AutoImageProcessor.from_pretrained(VISION_BACKBONE))
+    processor.append(AutoTokenizer.from_pretrained(TEXT_BACKBONE))
 
     model = NetShareFusionCLIP(
         num_labels=output_dim,
@@ -133,12 +138,12 @@ elif model_name == 'netsharefusion':
 elif model_name == 'fakenews_separate':
 
     processor = []
-    processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
-    processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
-    
+    processor.append(AutoImageProcessor.from_pretrained(VISION_BACKBONE))
+    processor.append(AutoTokenizer.from_pretrained(TEXT_BACKBONE))
+
     model = FakeNewsSeparate(
-        "", 
-        "", 
+        "",
+        "",
         output_dim=output_dim)
 else:
     pass

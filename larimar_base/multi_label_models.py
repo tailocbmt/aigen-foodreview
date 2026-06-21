@@ -13,14 +13,14 @@ class FakeNewsSeparate(BaseDetector):
 
         # Text encoder
         self.text_encoder = BertForSequenceClassification.from_pretrained(
-            "bert-base-uncased", # Replace with the base model you used
+            "bert-base-uncased",  # Replace with the base model you used
             ignore_mismatched_sizes=True
         )
 
         # Image encoder (Hugging Face)
         self.image_encoder = ResNetForImageClassification.from_pretrained(
             "microsoft/resnet-50", num_labels=output_dim, ignore_mismatched_sizes=True)
-        
+
         # 4. Inject your dynamically found latest weights
         if text_weights_dir != "":
             text_state_dict = torch.load(text_weights_dir)
@@ -44,16 +44,17 @@ class FakeNewsSeparate(BaseDetector):
         text_val = torch.softmax(text_outputs.logits, dim=-1)
         # 1. Remove .tolist() and add .unsqueeze(1) to make shape [B, 1]
         text_pred = torch.argmax(text_val, dim=-1).unsqueeze(1)
-        
+
         image_val = torch.softmax(image_outputs.logits, dim=-1)
         # 2. Remove .tolist() and add .unsqueeze(1) to make shape [B, 1]
         image_pred = torch.argmax(image_val, dim=-1).unsqueeze(1)
-        
+
         # 3. Now you can safely concatenate them into a [B, 2] tensor
         logits = torch.cat((text_pred, image_pred), dim=1)
-        
+
         return logits
-    
+
+
 class FakeNewsMultimodal(BaseDetector):
     def __init__(self, output_dim: int = 2):
         super().__init__()
@@ -113,7 +114,9 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
         use_memory=True,
         memory_size=512,
         memory_mode="read_write",
-        fusion_type="add"
+        fusion_type="add",
+        text_backbone="bert-base-uncased",
+        vision_backbone="microsoft/resnet-50"
     ):
         super().__init__(
             feature_dim=2816,
@@ -124,12 +127,12 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
             fusion_type=fusion_type
         )
 
-        self.text_encoder = BertModel.from_pretrained("bert-base-uncased")
+        self.text_encoder = BertModel.from_pretrained(text_backbone)
         text_dim = self.text_encoder.config.hidden_size  # 768
 
         # Image encoder (Hugging Face)
         self.image_encoder = ResNetForImageClassification.from_pretrained(
-            "microsoft/resnet-50",
+            vision_backbone,
             num_labels=out_dim,
             ignore_mismatched_sizes=True
         )
@@ -420,15 +423,15 @@ class CLIPDetectorWMemoryCoAttention(MemoryAugmentedDetector):
 class NetShareFusionCLIP(MemoryAugmentedDetector):
     def __init__(
         self,
-        use_memory: str="linear",
-        memory_size: int=512,
-        memory_mode: str="read_write",
+        use_memory: str = "linear",
+        memory_size: int = 512,
+        memory_mode: str = "read_write",
         fusion_type: str = "add",
         model_dim: int = 256,
         num_labels: int = 2,
         dropout: float = 0.5
     ):
-        
+
         super().__init__(
             feature_dim=3072,
             out_dim=num_labels,
@@ -499,14 +502,14 @@ class NetShareFusionCLIP(MemoryAugmentedDetector):
 
         # DCT feature
         dct_out = self.dct_img(dct_img)
-        # 2. Reshape back to (Batch, Channels, Height, Width) 
+        # 2. Reshape back to (Batch, Channels, Height, Width)
         # Assuming out_channels=64 and a square spatial dimension (64x64)
         dct_out = dct_out.view(-1, 64, 64, 64)
         # 3. Pool down to an 8x8 spatial size
         dct_out = F.adaptive_avg_pool2d(dct_out, (8, 8))
         dct_out = torch.flatten(dct_out, start_dim=1)
         dct_out = self.linear_dct(dct_out)
-        
+
         combined = torch.cat((text_output, image_output, dct_out), dim=1)
 
         return combined
