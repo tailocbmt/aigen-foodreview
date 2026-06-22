@@ -119,7 +119,7 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
         vision_backbone="microsoft/resnet-50"
     ):
         super().__init__(
-            feature_dim=2816,
+            feature_dim=824,  # resnet50 + bert: 2816
             out_dim=out_dim,
             use_memory=use_memory,
             memory_size=memory_size,
