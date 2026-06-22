@@ -121,7 +121,7 @@ elif model_name == 'fakenews':
         model = FakeNewsMultimodal(output_dim=output_dim)
     elif MODEL_MODE == "w/ mem":
         model = FakeNewsMultimodalWMemory(
-            out_dim=output_dim, use_memory=use_memory)
+            out_dim=output_dim, use_memory=use_memory, text_backbone=TEXT_BACKBONE, vision_backbone=VISION_BACKBONE)
     elif MODEL_MODE == "w/ coatt":
         model = FakeNewsMultimodalCoAttention(output_dim=output_dim)
     elif MODEL_MODE == "w/ coatt + mem":

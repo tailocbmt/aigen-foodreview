@@ -25,6 +25,9 @@ with open(config_path, 'r') as file:
 model_name = config.get('model_name', 'clip')
 use_memory = config.get('use_memory', 'linear')
 MODEL_MODE = config.get('mode', "w/o memory")
+TEXT_BACKBONE = config.get('text_backbone', "bert-base-uncased")
+VISION_BACKBONE = config.get('vision_backbone', "microsoft/resnet-50")
+
 # Note: for 'clip', max length should be 77
 dataset = config.get('dataset', 'food_review')
 MAX_LENGTH = config.get('MAX_LENGTH', 512)
@@ -77,14 +80,14 @@ elif model_name == 'flava':
 
 elif model_name == 'fakenews':
     processor = []
-    processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
-    processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
+    processor.append(AutoImageProcessor.from_pretrained(VISION_BACKBONE))
+    processor.append(AutoTokenizer.from_pretrained(TEXT_BACKBONE))
 
     if MODEL_MODE == "w/o mem":
         model = FakeNewsMultimodal(output_dim=output_dim)
     elif MODEL_MODE == "w/ mem":
         model = FakeNewsMultimodalWMemory(
-            out_dim=output_dim, use_memory=use_memory)
+            out_dim=output_dim, use_memory=use_memory, text_backbone=TEXT_BACKBONE, vision_backbone=VISION_BACKBONE)
     elif MODEL_MODE == "w/ coatt":
         model = FakeNewsMultimodalCoAttention(output_dim=output_dim)
     elif MODEL_MODE == "w/ coatt + mem":
@@ -92,8 +95,8 @@ elif model_name == 'fakenews':
             out_dim=output_dim, use_memory=use_memory)
 elif model_name == 'netsharefusion':
     processor = []
-    processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
-    processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
+    processor.append(AutoImageProcessor.from_pretrained(VISION_BACKBONE))
+    processor.append(AutoTokenizer.from_pretrained(TEXT_BACKBONE))
 
     model = NetShareFusionCLIP(
         num_labels=output_dim)
@@ -106,8 +109,8 @@ elif model_name == 'fakenews_separate':
                            key=lambda x: int(x.split('-')[1].split('.')[0]))[-1]
 
     processor = []
-    processor.append(AutoImageProcessor.from_pretrained("microsoft/resnet-50"))
-    processor.append(AutoTokenizer.from_pretrained('bert-base-uncased'))
+    processor.append(AutoImageProcessor.from_pretrained(VISION_BACKBONE))
+    processor.append(AutoTokenizer.from_pretrained(TEXT_BACKBONE))
 
     model = FakeNewsSeparate(
         os.path.join(text_weights_dir, text_weights),
