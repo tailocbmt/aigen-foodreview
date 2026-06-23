@@ -119,14 +119,14 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
         vision_backbone="microsoft/resnet-50"
     ):
         super().__init__(
-            feature_dim=824,  # resnet50 + bert: 2816
+            feature_dim=1280,  # resnet50 + bert: 2816; resnet18 + bert: 824
             out_dim=out_dim,
             use_memory=use_memory,
             memory_size=memory_size,
             memory_mode=memory_mode,
             fusion_type=fusion_type
         )
-        image_dim = 512  # resnet50 + bert: 2048
+        image_dim = 512  # resnet50 + bert: 2048; resnet18 + bert: 512
 
         self.text_encoder = BertModel.from_pretrained(text_backbone)
         text_dim = self.text_encoder.config.hidden_size  # 768
