@@ -25,6 +25,8 @@ with open(config_path, 'r') as file:
 model_name = config.get('model_name', 'clip')
 use_memory = config.get('use_memory', 'linear')
 MODEL_MODE = config.get('mode', "w/o memory")
+MEMORY_SIZE = config.get('memory_size', 1280)
+FEATURE_DIM = config.get('feature_dim', 512)
 TEXT_BACKBONE = config.get('text_backbone', "bert-base-uncased")
 VISION_BACKBONE = config.get('vision_backbone', "microsoft/resnet-50")
 
@@ -87,7 +89,13 @@ elif model_name == 'fakenews':
         model = FakeNewsMultimodal(output_dim=output_dim)
     elif MODEL_MODE == "w/ mem":
         model = FakeNewsMultimodalWMemory(
-            out_dim=output_dim, use_memory=use_memory, text_backbone=TEXT_BACKBONE, vision_backbone=VISION_BACKBONE)
+            out_dim=output_dim,
+            use_memory=use_memory,
+            memory_size=MEMORY_SIZE,
+            feature_dim=FEATURE_DIM,
+            text_backbone=TEXT_BACKBONE,
+            vision_backbone=VISION_BACKBONE
+        )
     elif MODEL_MODE == "w/ coatt":
         model = FakeNewsMultimodalCoAttention(output_dim=output_dim)
     elif MODEL_MODE == "w/ coatt + mem":
