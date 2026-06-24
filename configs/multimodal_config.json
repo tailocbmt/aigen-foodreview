@@ -5,6 +5,8 @@
   "use_memory": "rope",
   "vision_backbone": "microsoft/resnet-18",
   "text_backbone": "distilbert-base-uncased",
+  "memory_size": 1280,
+  "feature_dim": 512,
   "MAX_LENGTH": 77,
   "dataset": "evons_multimodal",
   "train_file": "./evons_data/train_multilabel.csv",
