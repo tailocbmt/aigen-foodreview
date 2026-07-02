@@ -202,7 +202,7 @@ with torch.no_grad():
         preds = (probs > 0.5).int()
 
         pred_val.extend(preds.cpu().numpy())
-        ids_val.extend(ids_val.cpu().numpy())
+        ids_val.extend(ids_val)
 
     # Convert to numpy
     y_pred = np.array(pred_val)
