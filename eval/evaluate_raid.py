@@ -217,5 +217,5 @@ with torch.no_grad():
     results = scores_df[["id", "score"]].to_dict(orient="records")
 
     print(f"Done! Writing predictions to output path: raid_result.json")
-    with open("raid_result.json", "w") as f:
+    with open("predictions.json", "w") as f:
         json.dump(results, f)

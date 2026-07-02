@@ -913,3 +913,69 @@ class RAIDMultimodalDataset(Dataset):
                 truncation=True,
                 padding="max_length",
             )
+
+
+class DefactifyMultimodalDataset(Dataset):
+    def __init__(self, processor, max_length):
+        super().__init__()
+        self.data = load_dataset(
+            "Rajarshi-Roy-research/Defactify_Image_Dataset", split="test")
+
+        self.processor = processor
+        self.max_length = max_length
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        item = self.data[index]
+
+        text = str(item["Caption"])
+        image = item["Image"].convert("RGB")
+
+        inputs = self.tokenize(text=[text], images=[image])
+
+        labels = torch.tensor(
+            [
+                int(item["Label_A"]),
+            ],
+            dtype=torch.float
+        )
+
+        return {
+            "inputs": inputs,
+            "label": labels,
+        }
+
+    def tokenize(self, text: list, images: list):
+        if isinstance(self.processor, list):
+            image_inputs = self.processor[0](
+                images=images, return_tensors="pt")
+
+            if self.max_length:
+                text_inputs = self.processor[1](
+                    text,
+                    return_tensors="pt",
+                    max_length=self.max_length,
+                    truncation=True,
+                    padding="max_length",
+                )
+            else:
+                text_inputs = self.processor[1](
+                    text,
+                    return_tensors="pt",
+                )
+
+            return {
+                **image_inputs,
+                **text_inputs,
+            }
+        else:
+            return self.processor(
+                text=text,
+                images=images,
+                return_tensors="pt",
+                max_length=self.max_length,
+                truncation=True,
+                padding="max_length",
+            )
