@@ -851,7 +851,6 @@ class RAIDMultimodalDataset(Dataset):
     def __init__(self, processor, max_length):
         super().__init__()
         self.data = load_data(split="test")
-        print(self.data)
 
         self.processor = processor
         self.max_length = max_length
@@ -861,6 +860,7 @@ class RAIDMultimodalDataset(Dataset):
 
     def __getitem__(self, index):
         item = self.data.iloc[index]
+        item_id = item["id"]
 
         text = str(item["generation"])
 
@@ -869,13 +869,14 @@ class RAIDMultimodalDataset(Dataset):
 
         labels = torch.tensor(
             [
-                int(item["label_text"]),
-                int(item["label_image"]),
+                1,
+                1
             ],
             dtype=torch.float
         )
 
         return {
+            "ids": item_id,
             "inputs": inputs,
             "label": labels,
         }
