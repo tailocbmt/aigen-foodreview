@@ -201,7 +201,7 @@ with torch.no_grad():
         probs = torch.sigmoid(outputs)
         preds = (probs > 0.5).int()
 
-        pred_val.extend(preds.cpu().numpy())
+        pred_val.extend(probs.cpu().numpy()[0])
         ids_val.extend(ids_val)
 
     # Convert to numpy
