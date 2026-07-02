@@ -17,6 +17,7 @@ import os
 from PIL import Image
 from larimar_base.utils import process_dct_img
 from modules.utils import DatasetTransforms
+from raid.utils import load_data
 
 
 @dataclass
@@ -803,6 +804,73 @@ class AIGenFoodMultimodalDataset(Dataset):
             [
                 int(item["label"]),
                 int(item["label"]),
+            ],
+            dtype=torch.float
+        )
+
+        return {
+            "inputs": inputs,
+            "label": labels,
+        }
+
+    def tokenize(self, text: list, images: list):
+        if isinstance(self.processor, list):
+            image_inputs = self.processor[0](
+                images=images, return_tensors="pt")
+
+            if self.max_length:
+                text_inputs = self.processor[1](
+                    text,
+                    return_tensors="pt",
+                    max_length=self.max_length,
+                    truncation=True,
+                    padding="max_length",
+                )
+            else:
+                text_inputs = self.processor[1](
+                    text,
+                    return_tensors="pt",
+                )
+
+            return {
+                **image_inputs,
+                **text_inputs,
+            }
+        else:
+            return self.processor(
+                text=text,
+                images=images,
+                return_tensors="pt",
+                max_length=self.max_length,
+                truncation=True,
+                padding="max_length",
+            )
+
+
+class RAIDMultimodalDataset(Dataset):
+    def __init__(self, processor, max_length):
+        super().__init__()
+        self.data = load_data(split="test")
+        print(self.data)
+
+        self.processor = processor
+        self.max_length = max_length
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        item = self.data.iloc[index]
+
+        text = str(item["generation"])
+
+        image = Image.new("RGB", (224, 224), color=(0, 0, 0))          # black
+        inputs = self.tokenize(text=[text], images=[image])
+
+        labels = torch.tensor(
+            [
+                int(item["label_text"]),
+                int(item["label_image"]),
             ],
             dtype=torch.float
         )

@@ -6,7 +6,7 @@ import json
 from transformers import AutoImageProcessor, AutoTokenizer, CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
 from sklearn.metrics import accuracy_score, hamming_loss, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader, Subset
-from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, EvonsOfflineMultimodalWDctDataset, HintsOfTruthMultimodalDataset, AIGenFoodMultimodalDataset
+from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, EvonsOfflineMultimodalWDctDataset, HintsOfTruthMultimodalDataset, AIGenFoodMultimodalDataset, RAIDMultimodalDataset
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
 from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, FakeNewsSeparate, NetShareFusionCLIP
 from modules.utils import multilabel_accuracy
@@ -170,6 +170,9 @@ elif dataset == "fakenews":
 elif dataset == "foodreview":
     test = AIGenFoodMultimodalDataset(
         test_file, image_dir, processor, MAX_LENGTH)
+elif dataset == "RAID":
+    test = RAIDMultimodalDataset(
+        processor, MAX_LENGTH)
 else:
     test = EvonsOfflineMultimodalWDctDataset(
         test_file, image_dir, processor, MAX_LENGTH)
