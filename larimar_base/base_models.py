@@ -219,6 +219,7 @@ class EpisodicMemoryRoPE(nn.Module):
         self.memory_age.zero_()
         self.memory_usage.zero_()
 
+    # Remove this if you WANT gradients to flow into memory, keep it if you don't.
     @torch.no_grad()
     def write_memory(self, episode: torch.Tensor):
         B = episode.size(0)
@@ -229,8 +230,14 @@ class EpisodicMemoryRoPE(nn.Module):
 
         _, idx = self.memory_age.topk(B, largest=False)
 
-        self.memory[idx] = episode.detach()
+        # ❌ OLD IN-PLACE: self.memory[idx] = episode.detach()
 
+        # ✅ NEW OUT-OF-PLACE ASSIGNMENT:
+        new_memory = self.memory.clone()
+        new_memory[idx] = episode.detach()
+        self.memory = new_memory  # Re-bind the buffer pointer safely
+
+        # These are fine to do in-place because they don't require gradients
         new_age = self.memory_age.max() + torch.arange(
             1, B + 1, device=episode.device
         )
