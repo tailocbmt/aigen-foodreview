@@ -189,7 +189,7 @@ model.set_memory_mode("read")
 with torch.no_grad():
     print('Validating..')
     for j, batchv in enumerate(test_dataloader):
-        ids_val = batchv['ids']
+        ids = batchv['ids']
 
         inputs_val = batchv['inputs']
         inputs_val = {key: tensor.squeeze(1).to(
@@ -201,8 +201,8 @@ with torch.no_grad():
         probs = torch.sigmoid(outputs)
         preds = (probs > 0.5).int()
 
-        pred_val.extend(probs.cpu().numpy()[0])
-        ids_val.extend(ids_val)
+        pred_val.extend(probs.cpu().numpy()[:, 0])
+        ids_val.extend(ids)
 
     # Convert to numpy
     y_pred = np.array(pred_val)
