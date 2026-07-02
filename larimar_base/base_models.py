@@ -342,13 +342,15 @@ class MemoryAugmentedDetector(nn.Module):
             return x, attention_weights
 
         if self.memory_mode == "read":
-            retrieved, attention_weights = self.episodic_memory.read_memory(x)
+            retrieved, attention_weights = self.episodic_memory(
+                x, self.memory_mode)
             x = self.fuse_with_memory(x, retrieved)
             return x, attention_weights
 
         elif self.memory_mode == "read_write":
             # only READ here
-            retrieved, attention_weights = self.episodic_memory.read_memory(x)
+            retrieved, attention_weights = self.episodic_memory(
+                x, self.memory_mode)
             x = self.fuse_with_memory(x, retrieved)
             return x, attention_weights
 
