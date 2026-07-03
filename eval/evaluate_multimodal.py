@@ -54,7 +54,7 @@ weights = weights[-1]
 weights_dir = os.path.join(output_dir, weights)
 
 output_dim = 1
-if 'evons_multimodal' or 'foodreview' in dataset:
+if 'evons_multimodal' or 'foodreview' or 'defactify' or 'semeval2024' in dataset:
     output_dim = 2
 
 if model_name == 'clip':
@@ -176,7 +176,7 @@ elif dataset == "RAID":
 elif dataset == "semeval2024":
     test = SemEval2024MultimodalDataset(
         processor, MAX_LENGTH)
-elif dataset == "Defactify":
+elif dataset == "defactify":
     test = DefactifyMultimodalDataset(
         processor, MAX_LENGTH)
 else:
