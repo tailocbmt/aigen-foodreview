@@ -1,3 +1,5 @@
+import json
+
 from PIL import Image, UnidentifiedImageError
 from typing import List, Tuple, Dict, Any, Optional
 from dataclasses import dataclass, field
@@ -871,6 +873,82 @@ class RAIDMultimodalDataset(Dataset):
             [
                 1,
                 1
+            ],
+            dtype=torch.float
+        )
+
+        return {
+            "ids": item_id,
+            "inputs": inputs,
+            "label": labels,
+        }
+
+    def tokenize(self, text: list, images: list):
+        if isinstance(self.processor, list):
+            image_inputs = self.processor[0](
+                images=images, return_tensors="pt")
+
+            if self.max_length:
+                text_inputs = self.processor[1](
+                    text,
+                    return_tensors="pt",
+                    max_length=self.max_length,
+                    truncation=True,
+                    padding="max_length",
+                )
+            else:
+                text_inputs = self.processor[1](
+                    text,
+                    return_tensors="pt",
+                )
+
+            return {
+                **image_inputs,
+                **text_inputs,
+            }
+        else:
+            return self.processor(
+                text=text,
+                images=images,
+                return_tensors="pt",
+                max_length=self.max_length,
+                truncation=True,
+                padding="max_length",
+            )
+
+
+class SemEval2024MultimodalDataset(Dataset):
+    def __init__(self, processor, max_length):
+        super().__init__()
+        self.data = []
+        file_path = "../semeval2024/SubtaskA/subtaskA_monolingual.jsonl"
+
+        if os.path.exists(file_path):
+            # lines=True is required for .jsonl files
+            self.data = pd.read_json(file_path, lines=True)
+            print(
+                f"Successfully loaded DataFrame with shape: {self.data.shape}")
+        else:
+            print(f"Error: {file_path} not found in the current directory.")
+
+        self.processor = processor
+        self.max_length = max_length
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        item = self.data.iloc[index]
+        item_id = item["id"]
+
+        text = str(item["text"])
+
+        image = Image.new("RGB", (224, 224), color=(0, 0, 0))          # black
+        inputs = self.tokenize(text=[text], images=[image])
+
+        labels = torch.tensor(
+            [
+                item["label"]
             ],
             dtype=torch.float
         )
