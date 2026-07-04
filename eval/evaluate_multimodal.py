@@ -238,5 +238,5 @@ with torch.no_grad():
         })
 
     # Save predictions
-    with open(f'evons_data/{model_name}.json', 'w') as f:
+    with open(f'evons_data/{model_name}_{dataset}.json', 'w') as f:
         json.dump(results, f, indent=2)
