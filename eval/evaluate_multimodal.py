@@ -228,3 +228,15 @@ with torch.no_grad():
     print(f'Micro F1-score on the test set: {micro_f1}')
     print(f'Sample F1-score on the test set: {samples_f1}')
     print(f'Hamming on the test set: {hamming}')
+
+    results = []
+    for i in range(len(y_true)):
+        results.append({
+            "sample_id": i,
+            "true_labels": y_true[i].tolist(),
+            "pred_labels": y_pred[i].tolist(),
+        })
+
+    # Save predictions
+    with open(f'evons_data/{model_name}.json', 'w') as f:
+        json.dump(results, f, indent=2)
