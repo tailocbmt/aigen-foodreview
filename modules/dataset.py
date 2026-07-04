@@ -805,7 +805,6 @@ class AIGenFoodMultimodalDataset(Dataset):
         labels = torch.tensor(
             [
                 int(item["label"]),
-                int(item["label"]),
             ],
             dtype=torch.float
         )
