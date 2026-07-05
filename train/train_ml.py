@@ -7,7 +7,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, hamming_loss
+from sklearn.metrics import accuracy_score, classification_report, precision_score, recall_score, f1_score, hamming_loss
 from sklearn.multioutput import MultiOutputClassifier
 from xgboost import XGBClassifier
 from sklearn.model_selection import GridSearchCV
@@ -62,7 +62,21 @@ def multilabel_metrics(y_true, y_pred, dataset_name="Test"):
     print(f'Samples F1-Score: {samples_f1:.4f} ({samples_f1*100:.2f}%)')
     print(f'Hamming Loss: {hamming:.4f} ({hamming*100:.2f}%)')
 
-    # Per-label metrics (optional but helpful)
+    # ── MODALITY INDEPENDENT REPORTS ───────────────────────────────────────────
+    if y_true.shape[1] >= 2:
+        print(f'\n{"-"*30} Modality Reports {"-"*30}')
+
+        # Column 0 = Text Modality
+        print(f"\n[TEXT MODALITY] Classification Report on {dataset_name}:")
+        print(classification_report(y_true[:, 0], y_pred[:, 0], labels=[0, 1],
+                                    target_names=['Generated (0)', 'Authentic (1)'], zero_division=0))
+
+        # Column 1 = Image Modality
+        print(f"\n[IMAGE MODALITY] Classification Report on {dataset_name}:")
+        print(classification_report(y_true[:, 1], y_pred[:, 1], labels=[0, 1],
+                                    target_names=['Generated (0)', 'Authentic (1)'], zero_division=0))
+
+    # Existing fallback per-label printout tracking
     print(f'\n--- Per-label Metrics ---')
     n_labels = y_true.shape[1]
     for i in range(n_labels):
