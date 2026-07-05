@@ -253,7 +253,12 @@ if 'fakenews' in model_name:
             plt.title(
                 f"Sample {i}: ResNet Grad-CAM Focus\nTrue Label: {sample['label']}")
             plt.axis('off')
-            plt.show()
+
+            img_save_path = os.path.join(
+                "evons_data", f"{model_name}_{dataset}_sample_{i}_gradcam.png")
+            plt.savefig(img_save_path, bbox_inches='tight', dpi=300)
+            plt.close()
+            print(f"Saved Image Grad-CAM to: {img_save_path}")
 
         # --- B. TEXT ATTENTION ---
         # Run forward pass explicitly asking for interpretability
@@ -278,7 +283,12 @@ if 'fakenews' in model_name:
                 sns.heatmap(
                     [weights[:valid_len]], xticklabels=tokens[:valid_len], yticklabels=False, cmap="Reds")
                 plt.title(f"Sample {i}: BERT [CLS] Token Attention")
-                plt.show()
+
+                text_save_path = os.path.join(
+                    "evons_data", f"{model_name}_{dataset}_sample_{i}_textattn.png")
+                plt.savefig(text_save_path, bbox_inches='tight', dpi=300)
+                plt.close()
+                print(f"Saved Text Attention to: {text_save_path}")
 
         except TypeError:
             print("Note: feature_extractor does not accept 'return_interpretability'. Update the model class to view text attention.")
