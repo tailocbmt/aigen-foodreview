@@ -232,7 +232,7 @@ if 'fakenews' in model_name:
         target_layers = None
 
     # 2. Select a few specific samples (e.g., the first 3 in the test set)
-    num_samples_to_visualize = 10
+    num_samples_to_visualize = 200
 
     for i in range(num_samples_to_visualize):
         sample = test[i]  # Get raw sample from dataset
@@ -280,7 +280,7 @@ if 'fakenews' in model_name:
             plt.axis('off')
 
             img_save_path = os.path.join(
-                "evons_data", f"{model_name}_{dataset}_sample_{i}_gradcam.png")
+                "evons_data", "visual", f"{model_name}_{dataset}_sample_{i}_gradcam.png")
             plt.savefig(img_save_path, bbox_inches='tight', dpi=300)
             plt.close()
             print(f"Saved Image Grad-CAM to: {img_save_path}")
@@ -310,7 +310,7 @@ if 'fakenews' in model_name:
                 plt.title(f"Sample {i}: BERT [CLS] Token Attention")
 
                 text_save_path = os.path.join(
-                    "evons_data", f"{model_name}_{dataset}_sample_{i}_textattn.png")
+                    "evons_data", "visual", f"{model_name}_{dataset}_sample_{i}_textattn.png")
                 plt.savefig(text_save_path, bbox_inches='tight', dpi=300)
                 plt.close()
                 print(f"Saved Text Attention to: {text_save_path}")
