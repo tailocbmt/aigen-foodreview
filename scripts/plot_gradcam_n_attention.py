@@ -211,8 +211,7 @@ if 'fakenews' in model_name:
     # In Hugging Face's ResNet50, the last conv block is usually stages[-1]
     if hasattr(model, 'image_encoder'):
         target_layers = [model.image_encoder.resnet.encoder.stages[-1]]
-        cam = GradCAM(model=model, target_layers=target_layers,
-                      use_cuda=(device == 'cuda'))
+        cam = GradCAM(model=model, target_layers=target_layers)
     else:
         print("Warning: Could not find image_encoder on this model architecture.")
         target_layers = None
