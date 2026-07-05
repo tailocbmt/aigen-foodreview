@@ -180,7 +180,7 @@ elif dataset == "defactify":
     test = DefactifyMultimodalDataset(
         processor, MAX_LENGTH)
 else:
-    test = EvonsOfflineMultimodalWDctDataset(
+    test = EvonsOfflineMultimodalDataset(
         test_file, image_dir, processor, MAX_LENGTH)
 
 test_dataloader = DataLoader(test, BATCH_SIZE)
