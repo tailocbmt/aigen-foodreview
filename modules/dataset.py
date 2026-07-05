@@ -570,6 +570,7 @@ class EvonsOfflineMultimodalDataset(Dataset):
         else:
             self.mode = 'test'
 
+        self.transform_image = None
         if self.transform_image is None:
             transform_pipeline = DatasetTransforms(
                 input_size=224,
