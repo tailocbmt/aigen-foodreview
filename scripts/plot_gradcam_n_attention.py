@@ -15,7 +15,23 @@ from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDatase
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
 from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, FakeNewsSeparate, NetShareFusionCLIP
 
+
+class MultimodalWrapper(torch.nn.Module):
+    def __init__(self, base_model, text_inputs):
+        super().__init__()
+        self.base_model = base_model
+        self.text_inputs = text_inputs
+
+    def forward(self, pixel_values):
+        # Reconstruct the dictionary that your multimodal model expects
+        full_inputs = {'pixel_values': pixel_values}
+        full_inputs.update(self.text_inputs)
+
+        # Pass the full dictionary to the real model
+        return self.base_model(full_inputs)
+
 # CONFIG
+
 
 # Define the path to your config file
 config_path = 'configs/multimodal_config.json'
@@ -211,7 +227,6 @@ if 'fakenews' in model_name:
     # In Hugging Face's ResNet50, the last conv block is usually stages[-1]
     if hasattr(model, 'image_encoder'):
         target_layers = [model.image_encoder.resnet.encoder.stages[-1]]
-        cam = GradCAM(model=model, target_layers=target_layers)
     else:
         print("Warning: Could not find image_encoder on this model architecture.")
         target_layers = None
@@ -230,14 +245,23 @@ if 'fakenews' in model_name:
         # --- A. IMAGE GRAD-CAM ---
         if target_layers is not None:
             # Generate Grad-CAM map
-            # We pass the dictionary inputs just like in the forward pass
-            image_tensor = inputs_vis['pixel_values'][0, :, :, :]
-            grayscale_cam = cam(
-                input_tensor=image_tensor, targets=None)[0, :]
+            # Separate the image tensor from the text dictionary
+            image_tensor = inputs_vis['pixel_values']
+            text_dict = {k: v for k, v in inputs_vis.items() if k !=
+                         'pixel_values'}
+
+            # Wrap the model for this specific sample
+            wrapper_model = MultimodalWrapper(model, text_dict)
+
+            # Initialize Grad-CAM with the wrapper
+            cam = GradCAM(model=wrapper_model, target_layers=target_layers)
+
+            # Pass ONLY the image tensor to Grad-CAM
+            grayscale_cam = cam(input_tensor=image_tensor, targets=None)[0, :]
 
             # Reconstruct the original image from the normalized tensor
             # Hugging Face usually normalizes with ImageNet mean/std. We must reverse this for display.
-            img_tensor = image_tensor.squeeze(
+            img_tensor = inputs_vis['pixel_values'].squeeze(
             ).cpu().numpy().transpose(1, 2, 0)
             mean = np.array([0.485, 0.456, 0.406])
             std = np.array([0.229, 0.224, 0.225])
