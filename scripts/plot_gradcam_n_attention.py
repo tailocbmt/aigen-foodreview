@@ -231,7 +231,8 @@ if 'fakenews' in model_name:
         if target_layers is not None:
             # Generate Grad-CAM map
             # We pass the dictionary inputs just like in the forward pass
-            grayscale_cam = cam(input_tensor=inputs_vis, targets=None)[0, :]
+            grayscale_cam = cam(
+                input_tensor=inputs_vis['pixel_values'], targets=None)[0, :]
 
             # Reconstruct the original image from the normalized tensor
             # Hugging Face usually normalizes with ImageNet mean/std. We must reverse this for display.
