@@ -1,3 +1,4 @@
+import string  # Useful for checking punctuation
 import cv2
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -302,16 +303,28 @@ if 'fakenews' in model_name:
 
                 # Filter out [PAD] tokens for clean visualization
                 # Get IDs for special tokens we want to hide
+# Get valid length to drop all [PAD] tokens immediately
                 pad_id = tokenizer.pad_token_id
-                sep_id = tokenizer.sep_token_id
+                valid_len = (input_ids != pad_id).sum().item()
 
-                # Create a boolean mask to KEEP tokens that are NOT padding and NOT the separator
-                keep_mask = (input_ids != pad_id) & (input_ids != sep_id)
+                valid_tokens = tokens[:valid_len]
+                valid_weights = weights[:valid_len]
 
-                # Apply the mask to filter the weights and tokens
-                filtered_weights = weights[keep_mask]
-                filtered_tokens = tokenizer.convert_ids_to_tokens(
-                    input_ids[keep_mask])
+                filtered_tokens = []
+                filtered_weights = []
+
+                for tok, w in zip(valid_tokens, valid_weights):
+                    # 1. Skip the [SEP] token
+                    if tok == tokenizer.sep_token:
+                        continue
+
+                    # 2. Skip tokens that consist entirely of punctuation
+                    # (This catches '.', ',', '!', '"', '-', '?', etc.)
+                    if all(char in string.punctuation for char in tok):
+                        continue
+
+                    filtered_tokens.append(tok)
+                    filtered_weights.append(w)
 
                 plt.figure(figsize=(12, 2))
                 sns.heatmap(
