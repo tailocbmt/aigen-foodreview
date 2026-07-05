@@ -1,5 +1,7 @@
 import json
 
+from matplotlib import pyplot as plt
+import shap
 import pandas as pd
 import numpy as np
 import pickle
@@ -251,6 +253,69 @@ def predict(model, X_test):
     return pred
 
 
+def generate_shap_plots(best_estimator, X_test, y_test, model_name):
+    """
+    Generates and saves SHAP summary plots for each label in a MultiOutput tree-based model.
+    """
+    print("\n--- Generating SHAP Feature Importance Plots ---")
+
+    # 1. Ensure save directory exists
+    save_dir = os.path.join("evons_data", "visual")
+    os.makedirs(save_dir, exist_ok=True)
+
+    # 2. Extract target label names
+    # Assumes y_test is a pandas DataFrame. If it's a numpy array, provide generic names.
+    if hasattr(y_test, 'columns'):
+        target_labels = y_test.columns.tolist()
+    else:
+        # Fallback if y_test lost its column names during transform_data
+        target_labels = ['label_text', 'label_image']
+
+    # 3. Verify the model structure supports MultiOutput
+    if not hasattr(best_estimator, 'estimators_'):
+        print("Warning: SHAP extraction requires a MultiOutputClassifier for multilabel tasks.")
+        print("Skipping SHAP visualization.")
+        return
+
+    # 4. Generate a plot for each label
+    for i, target_col in enumerate(target_labels):
+        print(f"Generating SHAP plot for {target_col}...")
+        try:
+            # Extract the specific Random Forest/Tree trained for this exact label
+            label_estimator = best_estimator.estimators_[i]
+
+            # Initialize the SHAP explainer
+            explainer = shap.TreeExplainer(label_estimator)
+            shap_values = explainer.shap_values(X_test)
+
+            # Extract values for Class 1 (Predicting 'Generated/Fake')
+            if isinstance(shap_values, list):
+                shap_values_to_plot = shap_values[1]
+            else:
+                shap_values_to_plot = shap_values[:, :, 1] if len(
+                    shap_values.shape) == 3 else shap_values
+
+            # Plotting
+            plt.figure(figsize=(10, 6))
+            plt.title(
+                f"SHAP Feature Importance ({model_name}): {target_col.upper()}")
+
+            # Generate summary plot
+            shap.summary_plot(shap_values_to_plot, X_test, show=False)
+
+            # Save and close
+            save_path = os.path.join(
+                save_dir, f"shap_importance_{model_name}_{target_col}.png")
+            plt.savefig(save_path, bbox_inches='tight', dpi=300)
+            plt.close()
+
+            print(f"Saved plot to '{save_path}'")
+
+        except Exception as e:
+            print(f"Could not generate SHAP plot for {target_col}. Error: {e}")
+            plt.close()
+
+
 def pipeline_sklearn(
     model_name,
     path_train="./data/train_dataset.csv",
@@ -279,6 +344,16 @@ def pipeline_sklearn(
     print(f'\n--- Test Set ---')
     pred = predict(best_estimator, X_test)
     multilabel_metrics(y_test, pred, "Test")
+
+    # ==========================================
+    # INTEGRATED SHAP VISUALIZATION
+    # ==========================================
+    # Only run this if the selected model is tree-based (like Random Forest)
+    if 'rf' in model_name.lower() or 'forest' in model_name.lower() or 'tree' in model_name.lower():
+        generate_shap_plots(best_estimator, X_test, y_test, model_name)
+    else:
+        print(
+            "\nNote: Skipping SHAP analysis. Selected model is not a tree-based ensemble.")
 
 
 if __name__ == '__main__':
