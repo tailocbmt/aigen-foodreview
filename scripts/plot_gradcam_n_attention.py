@@ -232,7 +232,7 @@ if 'fakenews' in model_name:
         target_layers = None
 
     # 2. Select a few specific samples (e.g., the first 3 in the test set)
-    num_samples_to_visualize = 200
+    num_samples_to_visualize = 350
 
     for i in range(num_samples_to_visualize):
         sample = test[i]  # Get raw sample from dataset
@@ -301,12 +301,21 @@ if 'fakenews' in model_name:
                 weights = text_attn[0].detach().cpu().numpy()
 
                 # Filter out [PAD] tokens for clean visualization
+                # Get IDs for special tokens we want to hide
                 pad_id = tokenizer.pad_token_id
-                valid_len = (input_ids != pad_id).sum().item()
+                sep_id = tokenizer.sep_token_id
+
+                # Create a boolean mask to KEEP tokens that are NOT padding and NOT the separator
+                keep_mask = (input_ids != pad_id) & (input_ids != sep_id)
+
+                # Apply the mask to filter the weights and tokens
+                filtered_weights = weights[keep_mask]
+                filtered_tokens = tokenizer.convert_ids_to_tokens(
+                    input_ids[keep_mask])
 
                 plt.figure(figsize=(12, 2))
                 sns.heatmap(
-                    [weights[:valid_len]], xticklabels=tokens[:valid_len], yticklabels=False, cmap="Reds")
+                    [filtered_weights], xticklabels=filtered_tokens, yticklabels=False, cmap="Reds")
                 plt.title(f"Sample {i}: BERT [CLS] Token Attention")
 
                 text_save_path = os.path.join(
