@@ -68,12 +68,12 @@ def multilabel_metrics(y_true, y_pred, dataset_name="Test"):
 
         # Column 0 = Text Modality
         print(f"\n[TEXT MODALITY] Classification Report on {dataset_name}:")
-        print(classification_report(y_true[:, 0], y_pred[:, 0], labels=[0, 1],
+        print(classification_report(y_true[:, 0], y_pred[:, 0], labels=[0, 1], digits=4,
                                     target_names=['Generated (0)', 'Authentic (1)'], zero_division=0))
 
         # Column 1 = Image Modality
         print(f"\n[IMAGE MODALITY] Classification Report on {dataset_name}:")
-        print(classification_report(y_true[:, 1], y_pred[:, 1], labels=[0, 1],
+        print(classification_report(y_true[:, 1], y_pred[:, 1], labels=[0, 1], digits=4,
                                     target_names=['Generated (0)', 'Authentic (1)'], zero_division=0))
 
     # Existing fallback per-label printout tracking
