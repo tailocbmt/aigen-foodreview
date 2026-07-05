@@ -109,8 +109,8 @@ elif model_name == 'netsharefusion':
     model = NetShareFusionCLIP(
         num_labels=output_dim)
 elif model_name == 'fakenews_separate':
-    text_weights_dir = ""
-    image_weights_dir = ""
+    text_weights_dir = "./evons_fakenews_text"
+    image_weights_dir = "./evons_fakenews_vision"
     text_weights = sorted(os.listdir(text_weights_dir),
                           key=lambda x: int(x.split('-')[1].split('.')[0]))[-1]
     image_weights = sorted(os.listdir(image_weights_dir),
