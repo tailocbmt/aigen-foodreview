@@ -309,7 +309,7 @@ class MemoryAugmentedDetector(nn.Module):
         use_memory: str = "linear",
         memory_size: int = 512,
         memory_mode: str = "read_write",
-        fusion_type: str = "concat"
+        fusion_type: str = "concat",
     ):
         super().__init__()
         self.feature_dim = feature_dim
@@ -376,16 +376,20 @@ class MemoryAugmentedDetector(nn.Module):
         if self.use_memory and getattr(self, "episodic_memory", None) is not None:
             self.episodic_memory.reset_memory()
 
-    def feature_extractor(self, inputs):
+    def feature_extractor(self, inputs, return_interpretability: bool = False):
         raise NotImplementedError
 
-    def forward(self, inputs, return_attention: bool = False):
-        x = self.feature_extractor(inputs)
+    def forward(self, inputs, return_attention: bool = False, return_interpretability: bool = False):
+        x, text_attention = self.feature_extractor(
+            inputs, return_interpretability)
         x, attention_weights = self.apply_memory(x)
         logits = self.classifier(x)
 
         if return_attention:
             return logits, attention_weights
+        if return_interpretability:
+            return logits, text_attention
+
         return logits
 
 

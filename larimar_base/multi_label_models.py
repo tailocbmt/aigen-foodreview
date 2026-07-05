@@ -154,14 +154,25 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
             nn.Linear(512, out_dim)
         )
 
-    def feature_extractor(self, inputs):
+    def feature_extractor(self, inputs, return_interpretability: bool = False):
         images = inputs['pixel_values']
         input_ids = inputs['input_ids']
         attention_mask = inputs['attention_mask']
         # Text
         text_outputs = self.text_encoder(
-            input_ids=input_ids, attention_mask=attention_mask)
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            output_attentions=return_interpretability  # Expose attentions
+        )
         text_features = text_outputs.last_hidden_state[:, 0, :]
+
+        # Extract text attention if requested
+        text_attention = None
+        if return_interpretability:
+            # attentions is a tuple of layers. We want the last layer: shape (B, Num_Heads, Seq_Len, Seq_Len)
+            last_layer_attn = text_outputs.attentions[-1]
+            # Average across all heads for the [CLS] token (index 0)
+            text_attention = last_layer_attn[:, :, 0, :].mean(dim=1)
 
         # Image
         image_outputs = self.image_encoder(images)
@@ -171,7 +182,7 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
         # Fusion
         combined = torch.cat((text_features, image_features), dim=1)
 
-        return combined
+        return combined, text_attention
 
 
 class CoAttentionBlock(nn.Module):
