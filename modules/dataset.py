@@ -592,10 +592,10 @@ class EvonsOfflineMultimodalDataset(Dataset):
         image = Image.open(image_path).convert("RGB")
         inputs = self.tokenize(text=[text], images=[image])
 
-        if self.transform_image is not None:
-            image_np = np.array(image)  # Shape: (H, W, C), dtype: uint8
-            image_tensor = self.transform_image(image=image_np)['image']
-            inputs["pixel_values"] = image_tensor
+        # if self.transform_image is not None:
+        #     image_np = np.array(image)  # Shape: (H, W, C), dtype: uint8
+        #     image_tensor = self.transform_image(image=image_np)['image']
+        #     inputs["pixel_values"] = image_tensor
 
         labels = torch.tensor(
             [
