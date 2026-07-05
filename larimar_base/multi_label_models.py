@@ -130,7 +130,8 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
         )
         image_dim = 2048  # resnet50 + bert: 2048; resnet18 + bert: 512
 
-        self.text_encoder = BertModel.from_pretrained(text_backbone)
+        self.text_encoder = BertModel.from_pretrained(
+            text_backbone, attn_implementation="eager")
         text_dim = self.text_encoder.config.hidden_size  # 768
 
         # Image encoder (Hugging Face)

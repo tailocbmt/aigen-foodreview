@@ -232,7 +232,7 @@ if 'fakenews' in model_name:
         target_layers = None
 
     # 2. Select a few specific samples (e.g., the first 3 in the test set)
-    num_samples_to_visualize = 3
+    num_samples_to_visualize = 10
 
     for i in range(num_samples_to_visualize):
         sample = test[i]  # Get raw sample from dataset
