@@ -155,7 +155,7 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
             memory_mode=memory_mode,
             fusion_type=fusion_type
         )
-        image_dim = 2048  # resnet50 + bert: 2048; resnet18 + bert: 512
+        image_dim = 512  # resnet50 + bert: 2048; resnet18 + bert: 512
 
         self.text_encoder = BertModel.from_pretrained(
             text_backbone, attn_implementation="eager")
