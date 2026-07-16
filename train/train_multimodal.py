@@ -270,7 +270,7 @@ for epoch in range(1, EPOCHS):
 
         labels = torch.tensor(batch['label'], dtype=torch.float64)
         labels = labels.to(device)
-        indexes = torch.tensor(batch['index'], dtype=torch.int64)
+        indexes = torch.tensor(batch['index'], dtype=torch.long).squeeze(1)
         indexes = indexes.to(device)
 
         output = model(inputs, indexes=indexes).squeeze(1).to(torch.float64)
