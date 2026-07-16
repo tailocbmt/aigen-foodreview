@@ -60,7 +60,8 @@ class FakeNewsMultimodal(BaseDetector):
         super().__init__()
 
         # Text encoder
-        self.text_encoder = BertModel.from_pretrained("bert-base-uncased")
+        self.text_encoder = BertModel.from_pretrained(
+            "bert-base-uncased", attn_implementation="eager")
         self.text_dim = self.text_encoder.config.hidden_size  # 768
 
         # Image encoder (Hugging Face)
@@ -86,14 +87,25 @@ class FakeNewsMultimodal(BaseDetector):
         combined = torch.cat((text, image), dim=1)
         return combined
 
-    def forward(self, inputs):
+    def feature_extractor(self, inputs, return_interpretability: bool = False):
         images = inputs['pixel_values']
         input_ids = inputs['input_ids']
         attention_mask = inputs['attention_mask']
         # Text
         text_outputs = self.text_encoder(
-            input_ids=input_ids, attention_mask=attention_mask)
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            output_attentions=return_interpretability  # Expose attentions
+        )
         text_features = text_outputs.last_hidden_state[:, 0, :]
+
+        # Extract text attention if requested
+        text_attention = None
+        if return_interpretability:
+            # attentions is a tuple of layers. We want the last layer: shape (B, Num_Heads, Seq_Len, Seq_Len)
+            last_layer_attn = text_outputs.attentions[-1]
+            # Average across all heads for the [CLS] token (index 0)
+            text_attention = last_layer_attn[:, :, 0, :].mean(dim=1)
 
         # Image
         image_outputs = self.image_encoder(images)
@@ -101,9 +113,22 @@ class FakeNewsMultimodal(BaseDetector):
         image_features = torch.flatten(image_features, start_dim=1)
 
         # Fusion
-        combined = self.fusion_block(text=text_features, image=image_features)
+        combined = torch.cat((text_features, image_features), dim=1)
 
-        logits = self.classifier(combined)
+        return combined, text_attention
+
+    def forward(self, inputs, return_attention: bool = False, return_interpretability: bool = False):
+        x, text_attention = self.feature_extractor(
+            inputs, return_interpretability)
+
+        # Fusion
+        logits = self.classifier(x)
+
+        if return_attention:
+            return logits
+        if return_interpretability:
+            return logits, text_attention
+
         return logits
 
 

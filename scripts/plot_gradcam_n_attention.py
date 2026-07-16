@@ -57,7 +57,7 @@ MAX_LENGTH = config.get('MAX_LENGTH', 512)
 test_file = config.get('test_file', '')
 output_dir = config.get('output_dir', '')
 image_dir = config.get('image_dir', '')
-BATCH_SIZE = 512
+BATCH_SIZE = 1
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 available_models = ['clip', 'flava', 'fakenews',
@@ -233,7 +233,7 @@ if 'fakenews' in model_name:
         target_layers = None
 
     # 2. Select a few specific samples (e.g., the first 3 in the test set)
-    num_samples_to_visualize = 350
+    num_samples_to_visualize = len(test)
 
     for i in range(num_samples_to_visualize):
         sample = test[i]  # Get raw sample from dataset
@@ -303,7 +303,7 @@ if 'fakenews' in model_name:
 
                 # Filter out [PAD] tokens for clean visualization
                 # Get IDs for special tokens we want to hide
-# Get valid length to drop all [PAD] tokens immediately
+                # Get valid length to drop all [PAD] tokens immediately
                 pad_id = tokenizer.pad_token_id
                 valid_len = (input_ids != pad_id).sum().item()
 

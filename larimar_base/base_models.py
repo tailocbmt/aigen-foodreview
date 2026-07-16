@@ -55,6 +55,85 @@ class FLAVADetector(BaseDetector):
         return self.fc1(x)
 
 
+class kNNMemory(nn.Module):
+    """
+    A non-parametric k-Nearest Neighbor memory baseline.
+    Retrieves the top-k closest episodes using L2 distance and averages them.
+    Contains zero learnable weights.
+    """
+
+    def __init__(
+        self,
+        memory_size: int,
+        episode_dim: int,
+        k: int = 5,  # The number of neighbors to retrieve
+    ):
+        super().__init__()
+        self.memory_size = memory_size
+        self.episode_dim = episode_dim
+        self.k = k
+
+        # Raw feature buffers (No query_net, key_net, or value_net!)
+        self.register_buffer("memory", torch.zeros(memory_size, episode_dim))
+        self.register_buffer("memory_age", torch.zeros(memory_size))
+
+    @torch.no_grad()
+    def reset_memory(self):
+        self.memory.zero_()
+        self.memory_age.zero_()
+
+    @torch.no_grad()
+    def write_memory(self, episode: torch.Tensor):
+        """Standard FIFO write policy, identical to the main model."""
+        B = episode.size(0)
+
+        if B > self.memory_size:
+            episode = episode[:self.memory_size]
+            B = self.memory_size
+
+        _, idx = self.memory_age.topk(B, largest=False)
+
+        new_memory = self.memory.clone()
+        new_memory[idx] = episode.detach()
+        self.memory = new_memory
+
+        new_age = self.memory_age.max() + torch.arange(1, B + 1, device=episode.device)
+        self.memory_age[idx] = new_age
+
+    @torch.no_grad()
+    def read_memory(self, query: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Retrieves top-k nearest neighbors based on raw Euclidean distance.
+        """
+        B, D = query.shape
+
+        # 1. Calculate pairwise Euclidean distance between Query and Memory slots
+        # dist shape: [B, memory_size]
+        dist = torch.cdist(query, self.memory, p=2.0)
+
+        # 2. Get the indices of the top-k smallest distances
+        # topk_indices shape: [B, k]
+        _, topk_indices = torch.topk(dist, self.k, dim=1, largest=False)
+
+        # 3. Retrieve the actual feature vectors for those k slots
+        # We expand the memory to batch size to gather correctly
+        expanded_memory = self.memory.unsqueeze(0).expand(B, -1, -1)
+        topk_indices_expanded = topk_indices.unsqueeze(-1).expand(-1, -1, D)
+
+        # retrieved_k shape: [B, k, D]
+        retrieved_k = torch.gather(expanded_memory, 1, topk_indices_expanded)
+
+        # 4. Average the k neighbors (mean pooling) to create the single retrieved vector
+        # retrieved shape: [B, D]
+        retrieved = retrieved_k.mean(dim=1)
+
+        # 5. Create a dummy attention matrix for compatibility with your existing code
+        dummy_attn = torch.zeros(B, self.memory_size, device=query.device)
+        dummy_attn.scatter_(1, topk_indices, 1.0 / self.k)
+
+        return retrieved, dummy_attn
+
+
 class EpisodicMemory(nn.Module):
     """Larimar-style episodic memory."""
 
@@ -601,8 +680,14 @@ class MemoryAugmentedDetector(nn.Module):
         self.feature_projection = None
 
         # 1. Initialize Memory/Memories based on architecture
-        if use_memory in ["linear", "rope"]:
-            MemoryClass = EpisodicMemory if use_memory == "linear" else EpisodicMemoryRoPE
+        if use_memory in ["linear", "rope", "knn"]:
+            MemoryClass = EpisodicMemory
+            if use_memory == "linear":
+                MemoryClass = EpisodicMemory
+            elif use_memory == "rope":
+                MemoryClass = EpisodicMemoryRoPE
+            elif use_memory == "knn":
+                MemoryClass = kNNMemory
 
             if self.memory_architecture == "split":
                 # Assuming the joint feature_dim is evenly split between text and image (e.g., 512 + 512 = 1024)
