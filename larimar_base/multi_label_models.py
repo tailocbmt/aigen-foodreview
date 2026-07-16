@@ -115,6 +115,7 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
         memory_size=512,
         # resnet50 + bert: 2816; resnet18 + tinybert: 824; resnet18 + distilbert: 1280
         feature_dim=1280,
+        memory_architecture="joint",
         memory_mode="read_write",
         fusion_type="add",
         text_backbone="bert-base-uncased",
@@ -125,6 +126,7 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
             out_dim=out_dim,
             use_memory=use_memory,
             memory_size=memory_size,
+            memory_architecture=memory_architecture,
             memory_mode=memory_mode,
             fusion_type=fusion_type
         )
