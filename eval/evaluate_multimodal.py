@@ -1,8 +1,8 @@
-import numpy as np
-from sklearn.model_selection import train_test_split
 import torch
 import os
 import json
+import numpy as np
+from sklearn.model_selection import train_test_split
 from transformers import AutoImageProcessor, AutoTokenizer, CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
 from sklearn.metrics import accuracy_score, hamming_loss, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader, Subset

@@ -412,7 +412,7 @@ class EpisodicMemoryRoPEExp(nn.Module):
     # ---------------------
     # RoPE-aware read
     # ---------------------
-
+    @torch.no_grad()
     def read_memory(
         self,
         query: torch.Tensor,
@@ -585,6 +585,8 @@ class MemoryAugmentedDetector(nn.Module):
         self.fusion_type = fusion_type
         self.memory_architecture = memory_architecture
 
+        self.feature_projection = None
+
         # 1. Initialize Memory/Memories based on architecture
         if use_memory in ["linear", "rope"]:
             MemoryClass = EpisodicMemory if use_memory == "linear" else EpisodicMemoryRoPE
@@ -678,6 +680,10 @@ class MemoryAugmentedDetector(nn.Module):
         x, text_attention = self.feature_extractor(
             inputs, return_interpretability)
         x, attention_weights = self.apply_memory(x)
+
+        if self.feature_projection is not None:
+            x = self.feature_projection(x)
+
         logits = self.classifier(x)
 
         if return_attention:

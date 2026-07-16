@@ -31,6 +31,7 @@ with open(config_path, 'r') as file:
 
 # Options for model_name: 'clip', 'flava'
 model_name = config.get('model_name', 'flava')
+freeze_backbone = config.get('freeze_backbone', False)
 use_memory = config.get('use_memory', 'linear')
 memory_architecture = config.get('memory_architecture', 'joint')
 MODEL_MODE = config.get('mode', "w/o memory")
@@ -219,8 +220,28 @@ print('Data loaded.')
 logging.basicConfig(filename=logging_file, level=logging.INFO, filemode='a+')
 print('Log file initialized.')
 
+# FREEZE MODEL
+if freeze_backbone is True:
+    # 2. Freeze the ENTIRE model first
+    for param in model.parameters():
+        param.requires_grad = False
+
+    # 3. Unfreeze ONLY the feature_projection
+    for param in model.feature_projection.parameters():
+        param.requires_grad = True
+
+    # 4. Unfreeze ONLY the classifier
+    for param in model.classifier.parameters():
+        param.requires_grad = True
+
+    print("Trainable parameters:")
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            print(f" - {name}")
+
+
 # OPTIMIZER
-optimiser = AdamW(model.parameters(), lr=LR)
+optimiser = AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=LR)
 criterion = nn.BCEWithLogitsLoss()
 
 # OPTIMIZATION
