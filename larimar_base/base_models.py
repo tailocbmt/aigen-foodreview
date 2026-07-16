@@ -373,7 +373,7 @@ class EpisodicMemoryRoPE(nn.Module):
 
     def forward(self, episode, mode="read_write", indexes=None):
         if mode == "write":
-            self.write_memory(episode, indexes=None)
+            self.write_memory(episode, indexes=indexes)
             return episode, None
 
         if mode == "read":
@@ -381,7 +381,7 @@ class EpisodicMemoryRoPE(nn.Module):
 
         if mode == "read_write":
             out, attn = self.read_memory(episode)
-            self.write_memory(episode, indexes=None)
+            self.write_memory(episode, indexes=indexes)
             return out, attn
 
         raise ValueError(mode)
