@@ -273,7 +273,7 @@ for epoch in range(1, EPOCHS):
         indexes = torch.tensor(batch['index'], dtype=torch.int64)
         indexes = indexes.to(device)
 
-        output = model(inputs, indexes).squeeze(1).to(torch.float64)
+        output = model(inputs, indexes=indexes).squeeze(1).to(torch.float64)
 
         loss = criterion(output, labels)
         loss.backward()

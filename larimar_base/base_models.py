@@ -727,9 +727,9 @@ class MemoryAugmentedDetector(nn.Module):
             if self.memory_mode in ["read", "read_write"]:
                 # Read from respective memories
                 retrieved_t, attn_t = self.episodic_memory_t(
-                    x_t, self.memory_mode, indexes)
+                    x_t, self.memory_mode, indexes=indexes)
                 retrieved_v, attn_v = self.episodic_memory_v(
-                    x_v, self.memory_mode, indexes)
+                    x_v, self.memory_mode, indexes=indexes)
 
                 # Fuse independently
                 fused_t = self.fuse_with_memory(x_t, retrieved_t)
@@ -748,7 +748,7 @@ class MemoryAugmentedDetector(nn.Module):
             # ORIGINAL LOGIC: Joint Memory
             if self.memory_mode in ["read", "read_write"]:
                 retrieved, attention_weights = self.episodic_memory(
-                    x, self.memory_mode)
+                    x, self.memory_mode, indexes=indexes)
                 x_out = self.fuse_with_memory(x, retrieved)
                 return x_out, attention_weights
 
@@ -777,7 +777,7 @@ class MemoryAugmentedDetector(nn.Module):
     def forward(self, inputs, indexes=None, return_attention: bool = False, return_interpretability: bool = False):
         x, text_attention = self.feature_extractor(
             inputs, return_interpretability)
-        x, attention_weights = self.apply_memory(x, indexes)
+        x, attention_weights = self.apply_memory(x, indexes=indexes)
 
         if self.feature_projection is not None:
             x = self.feature_projection(x)
