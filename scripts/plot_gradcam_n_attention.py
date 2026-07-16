@@ -31,8 +31,9 @@ class MultimodalWrapper(torch.nn.Module):
         # Pass the full dictionary to the real model
         return self.base_model(full_inputs)
 
-# CONFIG
 
+# CONFIG
+folder = "visual_fakenews_nomem"
 
 # Define the path to your config file
 config_path = 'configs/multimodal_config.json'
@@ -281,7 +282,7 @@ if 'fakenews' in model_name:
             plt.axis('off')
 
             img_save_path = os.path.join(
-                "evons_data", "visual", f"{model_name}_{dataset}_sample_{i}_gradcam.png")
+                "evons_data", folder, f"{model_name}_{dataset}_sample_{i}_gradcam.png")
             plt.savefig(img_save_path, bbox_inches='tight', dpi=300)
             plt.close()
             print(f"Saved Image Grad-CAM to: {img_save_path}")
@@ -332,7 +333,7 @@ if 'fakenews' in model_name:
                 plt.title(f"Sample {i}: BERT [CLS] Token Attention")
 
                 text_save_path = os.path.join(
-                    "evons_data", "visual", f"{model_name}_{dataset}_sample_{i}_textattn.png")
+                    "evons_data", folder, f"{model_name}_{dataset}_sample_{i}_textattn.png")
                 plt.savefig(text_save_path, bbox_inches='tight', dpi=300)
                 plt.close()
                 print(f"Saved Text Attention to: {text_save_path}")
