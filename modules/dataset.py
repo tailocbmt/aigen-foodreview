@@ -596,6 +596,12 @@ class EvonsOfflineMultimodalDataset(Dataset):
         #     image_np = np.array(image)  # Shape: (H, W, C), dtype: uint8
         #     image_tensor = self.transform_image(image=image_np)['image']
         #     inputs["pixel_values"] = image_tensor
+        indexes = torch.tensor(
+            [
+                index
+            ],
+            dtype=torch.long
+        )
 
         labels = torch.tensor(
             [
@@ -608,6 +614,7 @@ class EvonsOfflineMultimodalDataset(Dataset):
         return {
             "inputs": inputs,
             "label": labels,
+            "index": indexes
         }
 
     def _build_text(self, item):

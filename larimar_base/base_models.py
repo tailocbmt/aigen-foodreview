@@ -169,6 +169,10 @@ class EpisodicMemoryRoPE(nn.Module):
         self.register_buffer("memory_age", torch.zeros(memory_size))
         self.register_buffer("memory_usage", torch.zeros(memory_size))
 
+        # 🔥 NEW: Buffer to track the generator ID (e.g., 0=Real, 1=SD, 2=Mistral)
+        self.register_buffer("memory_labels", torch.zeros(
+            memory_size, dtype=torch.long))
+
         self.query_net = nn.Linear(episode_dim, episode_dim)
         self.key_net = nn.Linear(episode_dim, episode_dim)
         self.value_net = nn.Linear(episode_dim, episode_dim)
@@ -221,7 +225,7 @@ class EpisodicMemoryRoPE(nn.Module):
 
     # Remove this if you WANT gradients to flow into memory, keep it if you don't.
     @torch.no_grad()
-    def write_memory(self, episode: torch.Tensor):
+    def write_memory(self, episode: torch.Tensor, indexes: torch.Tensor = None):
         B = episode.size(0)
 
         if B > self.memory_size:
@@ -236,6 +240,9 @@ class EpisodicMemoryRoPE(nn.Module):
         new_memory = self.memory.clone()
         new_memory[idx] = episode.detach()
         self.memory = new_memory  # Re-bind the buffer pointer safely
+
+        # 🔥 NEW: Store the generator label alongside the features
+        self.memory_labels[idx] = indexes.detach()
 
         # These are fine to do in-place because they don't require gradients
         new_age = self.memory_age.max() + torch.arange(
@@ -285,9 +292,9 @@ class EpisodicMemoryRoPE(nn.Module):
 
     # ---------------------
 
-    def forward(self, episode, mode="read_write"):
+    def forward(self, episode, mode="read_write", indexes=None):
         if mode == "write":
-            self.write_memory(episode)
+            self.write_memory(episode, indexes=None)
             return episode, None
 
         if mode == "read":
@@ -295,7 +302,7 @@ class EpisodicMemoryRoPE(nn.Module):
 
         if mode == "read_write":
             out, attn = self.read_memory(episode)
-            self.write_memory(episode)
+            self.write_memory(episode, indexes=None)
             return out, attn
 
         raise ValueError(mode)
@@ -327,6 +334,10 @@ class EpisodicMemoryRoPEExp(nn.Module):
         self.register_buffer("memory", torch.zeros(memory_size, episode_dim))
         self.register_buffer("memory_age", torch.zeros(memory_size))
         self.register_buffer("memory_usage", torch.zeros(memory_size))
+
+        # 🔥 NEW: Buffer to track the generator ID (e.g., 0=Real, 1=SD, 2=Mistral)
+        self.register_buffer("memory_labels", torch.zeros(
+            memory_size, dtype=torch.long))
 
         self.query_net = nn.Linear(episode_dim, episode_dim)
         self.key_net = nn.Linear(episode_dim, episode_dim)
@@ -386,7 +397,7 @@ class EpisodicMemoryRoPEExp(nn.Module):
 
     # Remove this if you WANT gradients to flow into memory, keep it if you don't.
     @torch.no_grad()
-    def write_memory(self, episode: torch.Tensor):
+    def write_memory(self, episode: torch.Tensor, indexes: torch.Tensor = None):
         B = episode.size(0)
 
         if B > self.memory_size:
@@ -402,6 +413,9 @@ class EpisodicMemoryRoPEExp(nn.Module):
         new_memory[idx] = episode.detach()
         self.memory = new_memory  # Re-bind the buffer pointer safely
 
+        # 🔥 NEW: Store the generator label alongside the features
+        self.memory_labels[idx] = indexes.detach()
+
         # These are fine to do in-place because they don't require gradients
         new_age = self.memory_age.max() + torch.arange(
             1, B + 1, device=episode.device
@@ -412,7 +426,6 @@ class EpisodicMemoryRoPEExp(nn.Module):
     # ---------------------
     # RoPE-aware read
     # ---------------------
-    @torch.no_grad()
     def read_memory(
         self,
         query: torch.Tensor,
@@ -459,9 +472,9 @@ class EpisodicMemoryRoPEExp(nn.Module):
 
     # ---------------------
 
-    def forward(self, episode, mode="read_write"):
+    def forward(self, episode, mode="read_write", indexes=None):
         if mode == "write":
-            self.write_memory(episode)
+            self.write_memory(episode, indexes)
             return episode, None
 
         if mode == "read":
@@ -469,7 +482,7 @@ class EpisodicMemoryRoPEExp(nn.Module):
 
         if mode == "read_write":
             out, attn, distance = self.read_memory(episode)
-            self.write_memory(episode)
+            self.write_memory(episode, indexes)
             return out, attn
 
         raise ValueError(mode)
@@ -618,7 +631,7 @@ class MemoryAugmentedDetector(nn.Module):
         else:
             raise ValueError(f"Unsupported fusion_type: {self.fusion_type}")
 
-    def apply_memory(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def apply_memory(self, x: torch.Tensor, indexes: torch.Tensor = None) -> Tuple[torch.Tensor, torch.Tensor]:
         if not self.use_memory or self.memory_mode == "off":
             return x, None
 
@@ -629,9 +642,9 @@ class MemoryAugmentedDetector(nn.Module):
             if self.memory_mode in ["read", "read_write"]:
                 # Read from respective memories
                 retrieved_t, attn_t = self.episodic_memory_t(
-                    x_t, self.memory_mode)
+                    x_t, self.memory_mode, indexes)
                 retrieved_v, attn_v = self.episodic_memory_v(
-                    x_v, self.memory_mode)
+                    x_v, self.memory_mode, indexes)
 
                 # Fuse independently
                 fused_t = self.fuse_with_memory(x_t, retrieved_t)
@@ -676,10 +689,10 @@ class MemoryAugmentedDetector(nn.Module):
     def feature_extractor(self, inputs, return_interpretability: bool = False):
         raise NotImplementedError
 
-    def forward(self, inputs, return_attention: bool = False, return_interpretability: bool = False):
+    def forward(self, inputs, indexes=None, return_attention: bool = False, return_interpretability: bool = False):
         x, text_attention = self.feature_extractor(
             inputs, return_interpretability)
-        x, attention_weights = self.apply_memory(x)
+        x, attention_weights = self.apply_memory(x, indexes)
 
         if self.feature_projection is not None:
             x = self.feature_projection(x)

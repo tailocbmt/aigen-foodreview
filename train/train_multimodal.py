@@ -264,14 +264,16 @@ for epoch in range(1, EPOCHS):
 
         if i % 1000 == 0:
             print(f'{i}th batch..')
-        inputs, labels = batch['inputs'], batch['label']
+        inputs, labels, indexes = batch['inputs'], batch['label'], batch['index']
         inputs = {key: tensor.squeeze(1).to(
             device) for key, tensor in inputs.items()}
 
         labels = torch.tensor(batch['label'], dtype=torch.float64)
         labels = labels.to(device)
+        indexes = torch.tensor(batch['index'], dtype=torch.int64)
+        indexes = indexes.to(device)
 
-        output = model(inputs).squeeze(1).to(torch.float64)
+        output = model(inputs, indexes).squeeze(1).to(torch.float64)
 
         loss = criterion(output, labels)
         loss.backward()
@@ -296,8 +298,9 @@ for epoch in range(1, EPOCHS):
                 device) for key, tensor in inputs_val.items()}
 
             labels = batchv['label'].to(device).float()
+            indexes = batch['index'].to(device)
 
-            outputs = model(inputs_val)
+            outputs = model(inputs_val, indexes)
 
             loss = criterion(outputs, labels)
             val_loss += loss.item()

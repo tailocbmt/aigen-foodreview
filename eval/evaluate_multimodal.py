@@ -200,8 +200,9 @@ with torch.no_grad():
         inputs_val = {key: tensor.squeeze(1).to(
             device) for key, tensor in inputs_val.items()}
         labels = batchv['label']
+        indexes = batchv['index']
 
-        outputs = model(inputs_val)
+        outputs = model(inputs_val, indexes)
 
         probs = torch.sigmoid(outputs)
         preds = (probs > 0.5).int()
