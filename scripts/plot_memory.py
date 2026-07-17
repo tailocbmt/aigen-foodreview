@@ -306,7 +306,7 @@ def plot_multimodal_tsne(model, train_df, folder, SEED=42):
     plt.tight_layout()
 
     # Save
-    save_dir = f"./evons_data/{folder}"
+    save_dir = f"./evons_data"
     os.makedirs(save_dir, exist_ok=True)
 
     plt.savefig(f"{save_dir}/test_tnse.png", bbox_inches='tight', dpi=300)
