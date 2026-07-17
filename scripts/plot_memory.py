@@ -232,17 +232,22 @@ def plot_multimodal_tsne(model, train_df, folder, SEED=42):
         text_labels.append(row['text_generator'])
         image_labels.append(row['image_generator'])
 
-    # FIX 1: Convert lists to numpy arrays so boolean indexing works
     text_labels = np.array(text_labels)
     image_labels = np.array(image_labels)
-    print(text_labels, image_labels)
 
-    # 2. Apply t-SNE to the joint representations (512D -> 2D)
+    # 2. Split the memory matrix into Text (312 dim) and Image (512 dim)
+    # Assuming the vector format is [text_features, image_features]
+    text_matrix = memory_matrix[:, :312]
+    image_matrix = memory_matrix[:, 312:824]  # 312 + 512 = 824
+
+    # 3. Apply t-SNE to Joint, Text-Only, and Image-Only representations
     tsne = TSNE(n_components=2, perplexity=30, random_state=SEED)
-    memory_2d = tsne.fit_transform(memory_matrix)
-    print(memory_2d)
 
-    # 3. Setup dictionaries mapping your IDs to names
+    joint_2d = tsne.fit_transform(memory_matrix)
+    text_2d = tsne.fit_transform(text_matrix)
+    image_2d = tsne.fit_transform(image_matrix)
+
+    # 4. Setup dictionaries mapping your IDs to names
     txt_names = {
         "real": "Real Text", "qwen": "Qwen",
         "llama": "LLaMA3", "mistral": "Mistral"
@@ -252,38 +257,57 @@ def plot_multimodal_tsne(model, train_df, folder, SEED=42):
         "flux": "FLUX", "z": "Z-Image"
     }
 
-    # 4. Create a side-by-side figure
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
-    fig.suptitle("t-SNE of Joint Episodic Memory Slots",
-                 fontsize=16, fontweight='bold')
+    # 5. Create a 2x2 grid figure
+    fig, axes = plt.subplots(2, 2, figsize=(16, 14))
+    fig.suptitle("t-SNE of Episodic Memory Slots",
+                 fontsize=18, fontweight='bold')
 
-    # --- Plot A: Color by Text Generator ---
+    ax_joint_txt = axes[0, 0]
+    ax_joint_img = axes[0, 1]
+    ax_split_txt = axes[1, 0]
+    ax_split_img = axes[1, 1]
+
+    # --- Plot A: Joint colored by Text Source ---
     for label_id, name in txt_names.items():
-        print()
         idx = (text_labels == label_id)
-        ax1.scatter(memory_2d[idx, 0], memory_2d[idx, 1],
-                    label=name, alpha=0.7, s=40)
-    ax1.set_title("Colored by Text Source")
-    ax1.legend()
-    ax1.grid(True, linestyle='--', alpha=0.5)
+        ax_joint_txt.scatter(joint_2d[idx, 0], joint_2d[idx, 1],
+                             label=name, alpha=0.7, s=40)
+    ax_joint_txt.set_title("Joint Memory (Colored by Text Source)")
+    ax_joint_txt.legend()
+    ax_joint_txt.grid(True, linestyle='--', alpha=0.5)
 
-    # --- Plot B: Color by Image Generator ---
+    # --- Plot B: Joint colored by Image Source ---
     for label_id, name in img_names.items():
         idx = (image_labels == label_id)
-        ax2.scatter(memory_2d[idx, 0], memory_2d[idx, 1],
-                    label=name, alpha=0.7, s=40)
-    ax2.set_title("Colored by Image Source")
-    ax2.legend()
-    ax2.grid(True, linestyle='--', alpha=0.5)
+        ax_joint_img.scatter(joint_2d[idx, 0], joint_2d[idx, 1],
+                             label=name, alpha=0.7, s=40)
+    ax_joint_img.set_title("Joint Memory (Colored by Image Source)")
+    ax_joint_img.legend()
+    ax_joint_img.grid(True, linestyle='--', alpha=0.5)
+
+    # --- Plot C: Text-Only Split colored by Text Source ---
+    for label_id, name in txt_names.items():
+        idx = (text_labels == label_id)
+        ax_split_txt.scatter(text_2d[idx, 0], text_2d[idx, 1],
+                             label=name, alpha=0.7, s=40)
+    ax_split_txt.set_title("Text-Only Split (Colored by Text Source)")
+    ax_split_txt.legend()
+    ax_split_txt.grid(True, linestyle='--', alpha=0.5)
+
+    # --- Plot D: Image-Only Split colored by Image Source ---
+    for label_id, name in img_names.items():
+        idx = (image_labels == label_id)
+        ax_split_img.scatter(image_2d[idx, 0], image_2d[idx, 1],
+                             label=name, alpha=0.7, s=40)
+    ax_split_img.set_title("Image-Only Split (Colored by Image Source)")
+    ax_split_img.legend()
+    ax_split_img.grid(True, linestyle='--', alpha=0.5)
 
     plt.tight_layout()
 
-    # FIX 2: Ensure the directory exists before saving
-    save_dir = f"evons_data/{folder}"
+    # Save
+    save_dir = f"./evons_data/{folder}"
     os.makedirs(save_dir, exist_ok=True)
 
     plt.savefig(f"{save_dir}/test_tnse.png", bbox_inches='tight', dpi=300)
     plt.close()
-
-
-plot_multimodal_tsne(model=model, train_df=train_df, folder=folder, SEED=SEED)
