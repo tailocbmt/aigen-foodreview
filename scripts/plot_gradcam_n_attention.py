@@ -247,7 +247,8 @@ if 'fakenews' in model_name:
         output, retrieved = model(
             inputs_vis, return_memory=True)
         print(retrieved["x_input"].shape, retrieved["x_output"].shape,
-              retrieved["retrieved_memory"].shape, retrieved["memory_attention_weights"].shape)
+              retrieved["retrieved_memory"].shape, retrieved["memory_attention_weights"].shape, retrieved["top10_labels"].shape)
+        print(retrieved["top10_labels"])
 
         # --- A. IMAGE GRAD-CAM ---
         if target_layers is not None:

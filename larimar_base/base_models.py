@@ -714,7 +714,7 @@ class MemoryAugmentedDetector(nn.Module):
         else:
             raise ValueError(f"Unsupported fusion_type: {self.fusion_type}")
 
-    def apply_memory(self, x: torch.Tensor, indexes: torch.Tensor = None) -> Tuple[torch.Tensor, torch.Tensor]:
+    def apply_memory(self, x: torch.Tensor, indexes: torch.Tensor = None, return_memory: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
         outputs = {}
         if not self.use_memory or self.memory_mode == "off":
             return x, None
@@ -750,10 +750,35 @@ class MemoryAugmentedDetector(nn.Module):
                     x, self.memory_mode, indexes=indexes)
                 x_out = self.fuse_with_memory(x, retrieved)
 
-                outputs["x_input"] = x
-                outputs["x_output"] = x_out
-                outputs["retrieved_memory"] = retrieved
-                outputs["memory_attention_weights"] = attention_weights
+                if return_memory is True:
+                    # ---------------------------------------------------------
+                    # GET TOP 10 MOST RELEVANT MEMORIES
+                    # k=10 gets the top 10, dim=-1 operates across the 512 memory slots
+                    # ---------------------------------------------------------
+                    topk_scores, topk_indices = torch.topk(
+                        attention_weights, k=10, dim=-1)
+                    # topk_scores: [B, 10] -> The actual attention weights of the top 10
+                    # topk_indices: [B, 10] -> The row numbers (0 to 511) in self.memory
+
+                    # If you want to extract the actual vectors of those top 10 slots:
+                    # self.memory is shape [512, 824]. This will grab the exact rows.
+                    # Shape: [B, 10, 824]
+                    top10_vectors = self.episodic_memory.memory[topk_indices]
+
+                    # Because you recently added self.memory_labels, you can also
+                    # instantly check the generator IDs (e.g., Real, SD, Mistral) of those top 10:
+                    # Shape: [B, 10]
+                    top10_labels = self.episodic_memory.memory_labels[topk_indices]
+
+                    outputs["x_input"] = x
+                    outputs["x_output"] = x_out
+                    outputs["retrieved_memory"] = retrieved
+                    outputs["memory_attention_weights"] = attention_weights
+                    outputs["topk_scores"] = topk_scores
+                    outputs["topk_indices"] = topk_indices
+                    outputs["top10_vectors"] = top10_vectors
+                    outputs["top10_labels"] = top10_labels
+
                 return x_out, outputs
 
             elif self.memory_mode == "write":
@@ -783,7 +808,7 @@ class MemoryAugmentedDetector(nn.Module):
         x, text_attention = self.feature_extractor(
             inputs, return_interpretability)
         x, outputs = self.apply_memory(
-            x, indexes=indexes)
+            x, indexes=indexes, return_memory=return_memory)
 
         if self.feature_projection is not None:
             x = self.feature_projection(x)
