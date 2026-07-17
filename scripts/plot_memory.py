@@ -154,6 +154,7 @@ if model_name != 'fakenews_separate':
     model.load_state_dict(torch.load(weights_dir))
 
 model = model.to(device)
+model.set_memory_mode("read")
 print(f'Model {model_name} loaded at weights: {weights}.')
 
 # DATA
