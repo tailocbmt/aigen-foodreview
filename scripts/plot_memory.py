@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 import torch
 import os
 import json
+import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 from transformers import AutoImageProcessor, AutoTokenizer, CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
