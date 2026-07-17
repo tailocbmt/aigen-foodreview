@@ -208,7 +208,10 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
         image_features = torch.flatten(image_features, start_dim=1)
 
         # Fusion
-        combined = torch.cat((text_features, image_features), dim=1)
+        if self.memory_architecture == "split":
+            combined = (text_features, image_features)
+        else:
+            combined = torch.cat((text_features, image_features), dim=1)
 
         return combined, text_attention
 

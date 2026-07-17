@@ -691,8 +691,6 @@ class MemoryAugmentedDetector(nn.Module):
 
             if self.memory_architecture == "split":
                 # Assuming the joint feature_dim is evenly split between text and image (e.g., 512 + 512 = 1024)
-                assert feature_dim % 2 == 0, "feature_dim must be divisible by 2 for split memory."
-                half_dim = feature_dim // 2
                 self.episodic_memory_t = MemoryClass(
                     memory_size=memory_size, episode_dim=312)
                 self.episodic_memory_v = MemoryClass(
@@ -722,7 +720,7 @@ class MemoryAugmentedDetector(nn.Module):
 
         if self.memory_architecture == "split":
             # 🔥 NEW: Chunk the joint representation into Text and Image halves
-            x_t, x_v = torch.chunk(x, chunks=2, dim=1)
+            x_t, x_v = x[0], x[1]
 
             if self.memory_mode in ["read", "read_write"]:
                 # Read from respective memories
