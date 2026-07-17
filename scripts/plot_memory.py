@@ -311,3 +311,6 @@ def plot_multimodal_tsne(model, train_df, folder, SEED=42):
 
     plt.savefig(f"{save_dir}/test_tnse.png", bbox_inches='tight', dpi=300)
     plt.close()
+
+
+plot_multimodal_tsne(model=model, train_df=train_df, folder=folder, SEED=SEED)
