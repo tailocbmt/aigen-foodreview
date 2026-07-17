@@ -249,7 +249,7 @@ print('Training..')
 count = 0
 for epoch in range(1, EPOCHS):
     # reset before training
-    model.reset_memory()
+    # model.reset_memory()
     model.train()
     model.set_memory_mode("read_write")
 
@@ -286,7 +286,7 @@ for epoch in range(1, EPOCHS):
 
     val_loss = 0.0
 
-    model.reset_memory()
+    # model.reset_memory()
     model.eval()
     model.set_memory_mode("read")
 
