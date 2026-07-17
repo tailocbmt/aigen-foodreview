@@ -715,6 +715,7 @@ class MemoryAugmentedDetector(nn.Module):
             raise ValueError(f"Unsupported fusion_type: {self.fusion_type}")
 
     def apply_memory(self, x: torch.Tensor, indexes: torch.Tensor = None) -> Tuple[torch.Tensor, torch.Tensor]:
+        outputs = {}
         if not self.use_memory or self.memory_mode == "off":
             return x, None
 
@@ -748,7 +749,12 @@ class MemoryAugmentedDetector(nn.Module):
                 retrieved, attention_weights = self.episodic_memory(
                     x, self.memory_mode, indexes=indexes)
                 x_out = self.fuse_with_memory(x, retrieved)
-                return x_out, attention_weights
+
+                outputs["x_input"] = x
+                outputs["x_output"] = x_out
+                outputs["retrieved_memory"] = retrieved
+                outputs["memory_attention_weights"] = attention_weights
+                return x_out, outputs
 
             elif self.memory_mode == "write":
                 return x, None
@@ -772,10 +778,12 @@ class MemoryAugmentedDetector(nn.Module):
     def feature_extractor(self, inputs, return_interpretability: bool = False):
         raise NotImplementedError
 
-    def forward(self, inputs, indexes=None, return_attention: bool = False, return_interpretability: bool = False):
+    def forward(self, inputs, indexes=None, return_memory: bool = False, return_interpretability: bool = False):
+        outputs = {}
         x, text_attention = self.feature_extractor(
             inputs, return_interpretability)
-        x, attention_weights = self.apply_memory(x, indexes=indexes)
+        x, outputs = self.apply_memory(
+            x, indexes=indexes)
 
         if self.feature_projection is not None:
             x = self.feature_projection(x)
@@ -783,7 +791,7 @@ class MemoryAugmentedDetector(nn.Module):
         logits = self.classifier(x)
 
         if return_attention:
-            return logits, attention_weights
+            return logits, outputs
         if return_interpretability:
             return logits, text_attention
 

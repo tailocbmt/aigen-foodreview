@@ -33,7 +33,7 @@ class MultimodalWrapper(torch.nn.Module):
 
 
 # CONFIG
-folder = "visual_fakenews_nomem"
+folder = "testing_feat"
 
 # Define the path to your config file
 config_path = 'configs/multimodal_config.json'
@@ -244,6 +244,11 @@ if 'fakenews' in model_name:
         # Note: Your DataLoader squeezed dim 1, we do the same here
         inputs_vis = {key: tensor.unsqueeze(0).squeeze(1).to(
             device) for key, tensor in sample['inputs'].items()}
+
+        output, retrieved = model(
+            inputs_vis, return_memory=True)
+        print(retrieved["x_input"].shape, retrieved["x_output"].shape,
+              retrieved["retrieved_memory"].shape, retrieved["memory_attention_weights"].shape)
 
         # --- A. IMAGE GRAD-CAM ---
         if target_layers is not None:
