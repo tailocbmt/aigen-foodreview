@@ -37,7 +37,7 @@ class MultimodalWrapper(torch.nn.Module):
 
 
 # CONFIG
-folder = "visual_fakenews_nomem"
+folder = "visual_fakenews_mem"
 
 # Define the path to your config file
 config_path = 'configs/multimodal_config.json'
@@ -272,7 +272,8 @@ def plot_multimodal_tsne(model):
     ax2.grid(True, linestyle='--', alpha=0.5)
 
     plt.tight_layout()
-    plt.savefig(f"test_attn.png", bbox_inches='tight', dpi=300)
+    plt.savefig(f"evons_data/{folder}/test_tnse.png",
+                bbox_inches='tight', dpi=300)
     plt.close()
 
 
