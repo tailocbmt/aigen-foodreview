@@ -790,7 +790,7 @@ class MemoryAugmentedDetector(nn.Module):
 
         logits = self.classifier(x)
 
-        if return_attention:
+        if return_memory:
             return logits, outputs
         if return_interpretability:
             return logits, text_attention

@@ -154,7 +154,6 @@ if model_name != 'fakenews_separate':
     model.load_state_dict(torch.load(weights_dir))
 
 model = model.to(device)
-print(model.episodic_memory.memory_labels)
 
 # DATA
 if dataset == "hints_of_truth":
