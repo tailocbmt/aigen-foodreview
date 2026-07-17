@@ -1,12 +1,7 @@
 import string
 
 import pandas as pd  # Useful for checking punctuation
-import cv2
 import matplotlib.pyplot as plt
-import seaborn as sns
-from pytorch_grad_cam import GradCAM
-from pytorch_grad_cam.utils.image import show_cam_on_image
-import numpy as np
 from sklearn.model_selection import train_test_split
 import torch
 import os
@@ -14,7 +9,6 @@ import json
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 from transformers import AutoImageProcessor, AutoTokenizer, CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
-from sklearn.metrics import accuracy_score, hamming_loss, precision_score, recall_score, f1_score
 from torch.utils.data import DataLoader, Subset
 from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, EvonsOfflineMultimodalWDctDataset, HintsOfTruthMultimodalDataset, AIGenFoodMultimodalDataset, RAIDMultimodalDataset, DefactifyMultimodalDataset, SemEval2024MultimodalDataset
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
@@ -225,23 +219,27 @@ labels_val = []
 # Only run for our custom FakeNews models as target layers differ for CLIP/FLAVA
 
 
-def plot_multimodal_tsne(model):
+def plot_multimodal_tsne(model, train_df, folder, SEED=42):
     # 1. Extract the frozen memory matrix and both label sets
     text_labels, image_labels = [], []
 
     memory_matrix = model.episodic_memory.memory.cpu().numpy()
     memory_index = model.episodic_memory.memory_labels.cpu().numpy().tolist()
 
-    subset_df = train_df[memory_index]
+    subset_df = train_df.loc[memory_index]
     for _, row in subset_df.iterrows():
         text_labels.append(row['text_generator'])
         image_labels.append(row['image_generator'])
+
+    # FIX 1: Convert lists to numpy arrays so boolean indexing works
+    text_labels = np.array(text_labels)
+    image_labels = np.array(image_labels)
 
     # 2. Apply t-SNE to the joint representations (512D -> 2D)
     tsne = TSNE(n_components=2, perplexity=30, random_state=SEED)
     memory_2d = tsne.fit_transform(memory_matrix)
 
-    # 3. Setup dictionaries mapping your IDs to names (adjust based on your dataset)
+    # 3. Setup dictionaries mapping your IDs to names
     txt_names = {"real": "Real Text", "qwen": "Qwen",
                  "llama": "LLaMA3", "mistral": "Mistral"}
     img_names = {"real": "Real Image", "sd": "Stable Diff.",
@@ -255,7 +253,6 @@ def plot_multimodal_tsne(model):
     # --- Plot A: Color by Text Generator ---
     for label_id, name in txt_names.items():
         idx = (text_labels == label_id)
-        # Use different marker shapes or colors for visual clarity
         ax1.scatter(memory_2d[idx, 0], memory_2d[idx, 1],
                     label=name, alpha=0.7, s=40)
     ax1.set_title("Colored by Text Source")
@@ -272,8 +269,12 @@ def plot_multimodal_tsne(model):
     ax2.grid(True, linestyle='--', alpha=0.5)
 
     plt.tight_layout()
-    plt.savefig(f"evons_data/{folder}/test_tnse.png",
-                bbox_inches='tight', dpi=300)
+
+    # FIX 2: Ensure the directory exists before saving
+    save_dir = f"evons_data/{folder}"
+    os.makedirs(save_dir, exist_ok=True)
+
+    plt.savefig(f"{save_dir}/test_tnse.png", bbox_inches='tight', dpi=300)
     plt.close()
 
 
