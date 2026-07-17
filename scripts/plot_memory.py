@@ -235,16 +235,22 @@ def plot_multimodal_tsne(model, train_df, folder, SEED=42):
     # FIX 1: Convert lists to numpy arrays so boolean indexing works
     text_labels = np.array(text_labels)
     image_labels = np.array(image_labels)
+    print(text_labels, image_labels)
 
     # 2. Apply t-SNE to the joint representations (512D -> 2D)
     tsne = TSNE(n_components=2, perplexity=30, random_state=SEED)
     memory_2d = tsne.fit_transform(memory_matrix)
+    print(memory_2d)
 
     # 3. Setup dictionaries mapping your IDs to names
-    txt_names = {"real": "Real Text", "qwen": "Qwen",
-                 "llama": "LLaMA3", "mistral": "Mistral"}
-    img_names = {"real": "Real Image", "sd": "Stable Diff.",
-                 "flux": "FLUX", "z": "Z-Image"}
+    txt_names = {
+        "real": "Real Text", "qwen": "Qwen",
+        "llama": "LLaMA3", "mistral": "Mistral"
+    }
+    img_names = {
+        "real": "Real Image", "sd": "Stable Diff.",
+        "flux": "FLUX", "z": "Z-Image"
+    }
 
     # 4. Create a side-by-side figure
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
@@ -253,6 +259,7 @@ def plot_multimodal_tsne(model, train_df, folder, SEED=42):
 
     # --- Plot A: Color by Text Generator ---
     for label_id, name in txt_names.items():
+        print()
         idx = (text_labels == label_id)
         ax1.scatter(memory_2d[idx, 0], memory_2d[idx, 1],
                     label=name, alpha=0.7, s=40)
