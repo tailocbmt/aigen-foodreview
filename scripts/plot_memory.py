@@ -32,7 +32,7 @@ class MultimodalWrapper(torch.nn.Module):
 
 
 # CONFIG
-folder = "visual_fakenews_mem"
+folder = "./evons_data/test"
 
 # Define the path to your config file
 config_path = 'configs/multimodal_config.json'
@@ -216,46 +216,44 @@ labels_val = []
 # ==========================================
 # VISUALIZATION & INTERPRETABILITY
 # ==========================================
+# 4. Setup dictionaries mapping your IDs to names
+txt_names = {
+    "real": "Real Text", "qwen": "Qwen",
+    "llama": "LLaMA3", "mistral": "Mistral"
+}
+img_names = {
+    "real": "Real Image", "sd": "Stable Diff.",
+    "flux": "FLUX", "z": "Z-Image"
+}
 
 # Only run for our custom FakeNews models as target layers differ for CLIP/FLAVA
+# 1. Extract the frozen memory matrix and both label sets
+text_labels, image_labels = [], []
+
+memory_matrix = model.episodic_memory.memory.detach().cpu().numpy()
+memory_index = model.episodic_memory.memory_labels.detach().cpu().numpy().tolist()
+
+subset_df = train_df.loc[memory_index]
+for _, row in subset_df.iterrows():
+    text_labels.append(row['text_generator'])
+    image_labels.append(row['image_generator'])
+
+text_labels = np.array(text_labels)
+image_labels = np.array(image_labels)
+
+# 2. Split the memory matrix into Text (312 dim) and Image (512 dim)
+# Assuming the vector format is [text_features, image_features]
+text_matrix = memory_matrix[:, :312]
+image_matrix = memory_matrix[:, 312:]  # 312 + 512 = 824
 
 
-def plot_multimodal_tsne(model, train_df, folder, SEED=42):
-    # 1. Extract the frozen memory matrix and both label sets
-    text_labels, image_labels = [], []
-
-    memory_matrix = model.episodic_memory.memory.cpu().numpy()
-    memory_index = model.episodic_memory.memory_labels.cpu().numpy().tolist()
-
-    subset_df = train_df.loc[memory_index]
-    for _, row in subset_df.iterrows():
-        text_labels.append(row['text_generator'])
-        image_labels.append(row['image_generator'])
-
-    text_labels = np.array(text_labels)
-    image_labels = np.array(image_labels)
-
-    # 2. Split the memory matrix into Text (312 dim) and Image (512 dim)
-    # Assuming the vector format is [text_features, image_features]
-    text_matrix = memory_matrix[:, :312]
-    image_matrix = memory_matrix[:, 312:824]  # 312 + 512 = 824
-
+def plot_multimodal_tsne(folder, SEED=42):
     # 3. Apply t-SNE to Joint, Text-Only, and Image-Only representations
     tsne = TSNE(n_components=2, perplexity=30, random_state=SEED)
 
     joint_2d = tsne.fit_transform(memory_matrix)
     text_2d = tsne.fit_transform(text_matrix)
     image_2d = tsne.fit_transform(image_matrix)
-
-    # 4. Setup dictionaries mapping your IDs to names
-    txt_names = {
-        "real": "Real Text", "qwen": "Qwen",
-        "llama": "LLaMA3", "mistral": "Mistral"
-    }
-    img_names = {
-        "real": "Real Image", "sd": "Stable Diff.",
-        "flux": "FLUX", "z": "Z-Image"
-    }
 
     # 5. Create a 2x2 grid figure
     fig, axes = plt.subplots(2, 2, figsize=(16, 14))
@@ -306,11 +304,97 @@ def plot_multimodal_tsne(model, train_df, folder, SEED=42):
     plt.tight_layout()
 
     # Save
-    save_dir = f"./evons_data"
-    os.makedirs(save_dir, exist_ok=True)
-
-    plt.savefig(f"{save_dir}/test_tnse.png", bbox_inches='tight', dpi=300)
+    plt.savefig(f"{folder}/test_tnse.png", bbox_inches='tight', dpi=300)
     plt.close()
 
 
-plot_multimodal_tsne(model=model, train_df=train_df, folder=folder, SEED=SEED)
+def plot_mismatch_example(folder, SEED=42):
+    for i in range(len(test)):
+        print(f"Processing Example {i}/{len(test)}...")
+        sample = test[i]
+
+        # 2. Forward pass for this specific sample
+        inputs_vis = {key: tensor.unsqueeze(0).squeeze(1).to(device)
+                      for key, tensor in sample['inputs'].items()}
+
+        # We don't track gradients for visualization
+        with torch.no_grad():
+            output, retrieved = model(inputs_vis, return_memory=True)
+
+        # Retrieve Top-K indices
+        # Squeeze to handle potential batch dimensions like [1, 10] -> [10]
+        topk_index = retrieved["top10_labels"].squeeze().cpu().numpy().tolist()
+
+        # Map the Top-K indices to integer positions (0-511) to plot them correctly
+        topk_positions = [memory_index.index(idx) for idx in topk_index]
+
+        # 3. Extract x_input and prepare for t-SNE
+        x_input = retrieved["x_input"].squeeze().cpu().numpy()  # Shape: (824,)
+        x_text = x_input[:312]
+        x_image = x_input[312:]
+
+        # Append x_input to the end of the memory matrices
+        joint_data = np.vstack([memory_matrix, x_input])
+        text_data = np.vstack([text_matrix, x_text])
+        image_data = np.vstack([image_matrix, x_image])
+
+        # 4. Apply t-SNE
+        # (Must be done per loop so x_input gets properly mapped into the space)
+        tsne = TSNE(n_components=2, perplexity=30, random_state=SEED)
+        joint_2d_all = tsne.fit_transform(joint_data)
+        text_2d_all = tsne.fit_transform(text_data)
+        image_2d_all = tsne.fit_transform(image_data)
+
+        # Separate the base memory points from the x_input point (the very last item)
+        joint_2d, joint_x = joint_2d_all[:-1], joint_2d_all[-1]
+        text_2d, text_x = text_2d_all[:-1], text_2d_all[-1]
+        image_2d, image_x = image_2d_all[:-1], image_2d_all[-1]
+
+        # 5. Create the 2x2 grid figure
+        fig, axes = plt.subplots(2, 2, figsize=(16, 14))
+        fig.suptitle(f"t-SNE Retrieval Match (Test Sample {i})",
+                     fontsize=18, fontweight='bold')
+
+        # Helper function to plot each subplot cleanly
+        def plot_axis(ax, memory_pts, input_pt, labels, names_dict, title):
+            # A) Plot standard memory slots
+            for label_id in np.unique(labels):
+                idx = (labels == label_id)
+                display_name = names_dict.get(label_id, str(label_id))
+                ax.scatter(memory_pts[idx, 0], memory_pts[idx, 1],
+                           label=display_name, alpha=0.5, s=40)
+
+            # B) Highlight the Top-K retrieved memory slots (Hollow Lime Circles)
+            ax.scatter(memory_pts[topk_positions, 0], memory_pts[topk_positions, 1],
+                       facecolors='none', edgecolors='lime', s=150, linewidths=2.5,
+                       label='Top-10 Retrieved')
+
+            # C) Plot the actual query input (Large Red Star)
+            ax.scatter(input_pt[0], input_pt[1],
+                       marker='*', color='red', s=400, edgecolor='black', linewidths=1,
+                       label='Input Query (x_input)')
+
+            ax.set_title(title)
+            ax.legend()
+            ax.grid(True, linestyle='--', alpha=0.5)
+
+        # Plot all 4 panels
+        plot_axis(axes[0, 0], joint_2d, joint_x, text_labels,
+                  txt_names, "Joint Memory (Colored by Text Source)")
+        plot_axis(axes[0, 1], joint_2d, joint_x, image_labels,
+                  img_names, "Joint Memory (Colored by Image Source)")
+        plot_axis(axes[1, 0], text_2d, text_x, text_labels,
+                  txt_names, "Text-Only Split (Colored by Text Source)")
+        plot_axis(axes[1, 1], image_2d, image_x, image_labels,
+                  img_names, "Image-Only Split (Colored by Image Source)")
+
+        plt.tight_layout()
+
+        # Save with dynamic filename so they don't overwrite each other
+        save_path = os.path.join(folder, f"example_{i}_tsne.png")
+        plt.savefig(save_path, bbox_inches='tight', dpi=300)
+        plt.close()
+
+
+plot_multimodal_tsne(folder=folder, SEED=SEED)
+plot_mismatch_example(folder=folder, SEED=SEED)
