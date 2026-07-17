@@ -150,10 +150,11 @@ else:
     pass
 
 if model_name != 'fakenews_separate':
+    print(f'Model {model_name} loaded at weights: {weights}.')
     model.load_state_dict(torch.load(weights_dir))
 
 model = model.to(device)
-print(f'Model {model_name} loaded at weights: {weights}.')
+print(model.episodic_memory.memory_labels)
 
 # DATA
 if dataset == "hints_of_truth":
