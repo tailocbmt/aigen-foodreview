@@ -467,7 +467,6 @@ def analyze_accumulated_results(
     plt.tight_layout()
     boxplot_path = os.path.join(output_dir, 'coherence_boxplot.png')
     plt.savefig(boxplot_path, dpi=300)
-    plt.show()
     print(f"✅ Saved boxplot to {boxplot_path}")
 
     # === Plot 2: Delta Bar Chart ===
@@ -497,7 +496,6 @@ def analyze_accumulated_results(
     plt.tight_layout()
     barplot_path = os.path.join(output_dir, 'coherence_delta_barchart.png')
     plt.savefig(barplot_path, dpi=300)
-    plt.show()
     print(f"✅ Saved delta bar chart to {barplot_path}")
 
     return stats_df, df
@@ -513,7 +511,7 @@ def run_experiment_6_from_model(
     device,
     image_dim: int = 512,
     text_dim: int = 312,
-    output_dir: str = "./experiment_6_results"
+    output_dir: str = "./evons_data/experiment_6_results"
 ):
     """
     Full pipeline for Experiment 6.
@@ -529,7 +527,7 @@ def run_experiment_6_from_model(
         device=device,
         image_dim=image_dim,
         text_dim=text_dim,
-        max_samples=500   # set to e.g. 500 for quick test
+        max_samples=None   # set to e.g. 500 for quick test
     )
 
     print(f"✅ Collected {len(accumulator.x_image_list)} samples")
@@ -566,5 +564,5 @@ if __name__ == "__main__":
         device=device,
         image_dim=512,                # image feature dimension
         text_dim=312,                 # text feature dimension
-        output_dir="./experiment_6_results"
+        output_dir="./evons_data/experiment_6_results"
     )
