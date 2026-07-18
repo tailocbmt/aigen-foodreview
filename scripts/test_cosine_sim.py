@@ -540,7 +540,7 @@ if __name__ == "__main__":
     # Run the experiment
     stats_df, df = run_experiment_6_from_model(
         model=model,
-        dataloader=test_dataloader,   # use your test loader
+        dataloader=test,   # use your test loader
         device=device,
         image_dim=512,                # image feature dimension
         text_dim=312,                 # text feature dimension
