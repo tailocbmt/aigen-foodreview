@@ -137,6 +137,7 @@ class kNNMemory(nn.Module):
         self,
         episode: torch.Tensor,
         mode: str = "read_write",
+        top_k: int = None,
         indexes=None
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         if mode == "write":
