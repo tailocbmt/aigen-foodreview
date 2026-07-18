@@ -510,7 +510,7 @@ class MemoryAugmentedDetector(nn.Module):
         else:
             raise ValueError(f"Unsupported fusion_type: {self.fusion_type}")
 
-    def apply_memory(self, x: torch.Tensor, indexes: torch.Tensor = None, return_memory: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
+    def apply_memory(self, x: torch.Tensor, indexes: torch.Tensor = None, return_memory: bool = False, top_k: int = None) -> Tuple[torch.Tensor, torch.Tensor]:
         outputs = {}
         if not self.use_memory or self.memory_mode == "off":
             return x, None
@@ -543,7 +543,7 @@ class MemoryAugmentedDetector(nn.Module):
             # ORIGINAL LOGIC: Joint Memory
             if self.memory_mode in ["read", "read_write"]:
                 retrieved, attention_weights, distance = self.episodic_memory(
-                    x, self.memory_mode, indexes=indexes)
+                    x, self.memory_mode, indexes=indexes, top_k=top_k)
                 x_out = self.fuse_with_memory(x, retrieved)
 
                 if return_memory is True:
