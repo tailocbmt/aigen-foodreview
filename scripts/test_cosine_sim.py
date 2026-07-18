@@ -628,6 +628,6 @@ if __name__ == "__main__":
     # print("✅ Integration test passed!")
     run_experiment_6_from_model(
         model=model,
-        dataloader=test_dataloader,
+        dataloader=test,
         device=device
     )
