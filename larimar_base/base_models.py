@@ -1,6 +1,8 @@
 import math
 from typing import Tuple, Optional
 
+from sklearn.neighbors import NearestNeighbors
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -66,7 +68,7 @@ class kNNMemory(nn.Module):
         self,
         memory_size: int,
         episode_dim: int,
-        k: int = 1,  # The number of neighbors to retrieve
+        k: int = 50,  # The number of neighbors to retrieve
     ):
         super().__init__()
         self.memory_size = memory_size
@@ -102,32 +104,34 @@ class kNNMemory(nn.Module):
 
     @torch.no_grad()
     def read_memory(self, query: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """
-        Retrieves top-k nearest neighbors based on raw Euclidean distance.
-        """
         B, D = query.shape
 
-        # 1. Calculate pairwise Euclidean distance between Query and Memory slots
-        # dist shape: [B, memory_size]
-        dist = torch.cdist(query, self.memory, p=2.0)
+        # 1. Move data to CPU for sklearn (sklearn does not support GPU)
+        memory_np = self.memory.cpu().numpy()  # shape: [memory_size, D]
+        query_np = query.cpu().numpy()         # shape: [B, D]
 
-        # 2. Get the indices of the top-k smallest distances
-        # topk_indices shape: [B, k]
-        _, topk_indices = torch.topk(dist, self.k, dim=1, largest=False)
+        # 2. Build the sklearn KNN model and fit it to the memory
+        # WARNING: Fitting inside read_memory rebuilds the tree EVERY inference step!
+        nn = NearestNeighbors(n_neighbors=self.k,
+                              metric='euclidean', algorithm='auto')
+        nn.fit(memory_np)
 
-        # 3. Retrieve the actual feature vectors for those k slots
-        # We expand the memory to batch size to gather correctly
+        # 3. Get indices of the top-k smallest distances
+        # distances shape: [B, k], topk_indices_np shape: [B, k]
+        distances, topk_indices_np = nn.kneighbors(query_np)
+
+        # 4. Move indices back to the original device (GPU if applicable)
+        topk_indices = torch.tensor(topk_indices_np, device=query.device)
+
+        # 5. Retrieve the actual feature vectors for those k slots (back on GPU)
         expanded_memory = self.memory.unsqueeze(0).expand(B, -1, -1)
         topk_indices_expanded = topk_indices.unsqueeze(-1).expand(-1, -1, D)
-
-        # retrieved_k shape: [B, k, D]
         retrieved_k = torch.gather(expanded_memory, 1, topk_indices_expanded)
 
-        # 4. Average the k neighbors (mean pooling) to create the single retrieved vector
-        # retrieved shape: [B, D]
-        retrieved = retrieved_k.mean(dim=1)
+        # 6. Average the k neighbors
+        retrieved = retrieved_k.max(dim=1)[0]
 
-        # 5. Create a dummy attention matrix for compatibility with your existing code
+        # 7. Dummy attention matrix
         dummy_attn = torch.zeros(B, self.memory_size, device=query.device)
         dummy_attn.scatter_(1, topk_indices, 1.0 / self.k)
 

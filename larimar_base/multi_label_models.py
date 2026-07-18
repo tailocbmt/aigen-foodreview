@@ -216,6 +216,43 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
         return combined, text_attention
 
 
+class FakeNewsMultimodalTMemoryOnly(FakeNewsMultimodalWMemory):
+    def __init__(
+        self,
+        out_dim=1,
+        use_memory=True,
+        memory_size=512,
+        # resnet50 + bert: 2816; resnet18 + tinybert: 824; resnet18 + distilbert: 1280
+        feature_dim=1280,
+        memory_architecture="joint",
+        memory_mode="read_write",
+        fusion_type="add",
+        text_backbone="bert-base-uncased",
+        vision_backbone="microsoft/resnet-50"
+    ):
+        super().__init__(
+            out_dim,
+            use_memory,
+            memory_size,
+            feature_dim,
+            memory_architecture,
+            memory_mode,
+            fusion_type,
+            text_backbone,
+            vision_backbone
+        )
+        self.memory_project_dim = 2816
+        self.feature_projection = nn.Linear(
+            feature_dim, self.memory_project_dim)
+
+        self.classifier = nn.Sequential(
+            nn.Linear(self.memory_project_dim, 512),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(512, out_dim)
+        )
+
+
 class CoAttentionBlock(nn.Module):
     def __init__(self, dim: int, num_heads: int = 8, ffn_dim: int = 2048, dropout: float = 0.5):
         super().__init__()
