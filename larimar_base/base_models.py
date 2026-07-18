@@ -645,11 +645,12 @@ class MemoryAugmentedDetector(nn.Module):
         outputs = {}
         x, text_attention = self.feature_extractor(
             inputs, return_interpretability)
-        x, outputs = self.apply_memory(
-            x, indexes=indexes, return_memory=return_memory, top_k=top_k)
 
         if self.feature_projection is not None:
             x = self.feature_projection(x)
+
+        x, outputs = self.apply_memory(
+            x, indexes=indexes, return_memory=return_memory, top_k=top_k)
 
         logits = self.classifier(x)
 
