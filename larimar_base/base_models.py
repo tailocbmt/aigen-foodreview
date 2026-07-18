@@ -143,7 +143,8 @@ class kNNMemory(nn.Module):
         if mode == "write":
             return self.write_memory(episode), None
         elif mode == "read":
-            return self.read_memory(episode), None
+            retrieved, attention_weights = self.read_memory(episode)
+            return retrieved, attention_weights, None
         else:
             retrieved, attention_weights = self.read_memory(episode)
             self.write_memory(episode)
