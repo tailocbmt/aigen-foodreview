@@ -294,6 +294,8 @@ def run_inference_and_collect(
 
     # Store memory indices for visualization (optional)
 
+    curr = 0
+    max_count = 100
     with torch.no_grad():
         for sample in tqdm(dataloader, desc="Collecting Coherence Features"):
             # === YOUR EXISTING INPUT PREPARATION ===
@@ -317,6 +319,10 @@ def run_inference_and_collect(
                 label=input_label.flatten(),
                 preds=preds
             )
+
+            curr += 1
+            if curr > max_count:
+                break
 
     return accumulator
 
@@ -594,29 +600,34 @@ ASSUMPTIONS (Matches your code):
 # =============================================================================
 
 if __name__ == "__main__":
-    # Dummy test with your exact data shapes
-    print("Running integration test with dummy data...")
+    # # Dummy test with your exact data shapes
+    # print("Running integration test with dummy data...")
 
-    # Simulate your retrieved outputs
-    D = 412
-    N_samples = 100
+    # # Simulate your retrieved outputs
+    # D = 412
+    # N_samples = 100
 
-    class DummyRetrieved:
-        def __init__(self):
-            self.x_input = torch.randn(1, 2*D)
-            self.x_output = torch.randn(1, 2*D)
-            self.top10_labels = torch.randint(0, 512, (1, 10))
+    # class DummyRetrieved:
+    #     def __init__(self):
+    #         self.x_input = torch.randn(1, 2*D)
+    #         self.x_output = torch.randn(1, 2*D)
+    #         self.top10_labels = torch.randint(0, 512, (1, 10))
 
-    # Simulate accumulator
-    acc = CoherenceAccumulator()
-    for i in range(N_samples):
-        label = np.random.randint(0, 2, 2)
-        preds = np.random.randint(0, 2, 2)
-        x_input = np.random.randn(2*D)
-        x_output = np.random.randn(2*D)
-        acc.add_sample(x_input, x_output, label, preds)
+    # # Simulate accumulator
+    # acc = CoherenceAccumulator()
+    # for i in range(N_samples):
+    #     label = np.random.randint(0, 2, 2)
+    #     preds = np.random.randint(0, 2, 2)
+    #     x_input = np.random.randn(2*D)
+    #     x_output = np.random.randn(2*D)
+    #     acc.add_sample(x_input, x_output, label, preds)
 
-    # Analyze
-    stats, df = analyze_accumulated_results(
-        acc, output_dir="./test_experiment_6")
-    print("✅ Integration test passed!")
+    # # Analyze
+    # stats, df = analyze_accumulated_results(
+    #     acc, output_dir="./test_experiment_6")
+    # print("✅ Integration test passed!")
+    run_experiment_6_from_model(
+        model=model,
+        dataloader=test_dataloader,
+        device=device
+    )
