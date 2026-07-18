@@ -279,7 +279,7 @@ class EpisodicMemoryRoPE(nn.Module):
             self.compute_cis_1d(episode_dim, self.max_positions, rope_theta),
         )
 
-    def compute_cis_1d(self, dim: int, seq_len: int, theta: float = 10000.0):
+    def compute_cis_1d_old(self, dim: int, seq_len: int, theta: float = 10000.0):
         """
         1D RoPE frequencies (complex exponential form)
         returns: [seq_len, dim//2] complex tensor
@@ -307,156 +307,6 @@ class EpisodicMemoryRoPE(nn.Module):
         xk_out = torch.view_as_real(xk_ * freqs_cis[:xk_.shape[0]]).flatten(-2)
 
         return xq_out.type_as(xq), xk_out.type_as(xk)
-
-    # ---------------------
-    # Memory ops
-    # ---------------------
-
-    @torch.no_grad()
-    def reset_memory(self):
-        self.memory.zero_()
-        self.memory_age.zero_()
-        self.memory_usage.zero_()
-
-    # Remove this if you WANT gradients to flow into memory, keep it if you don't.
-    @torch.no_grad()
-    def write_memory(self, episode: torch.Tensor, indexes: torch.Tensor = None):
-        B = episode.size(0)
-
-        if B > self.memory_size:
-            episode = episode[:self.memory_size]
-            B = self.memory_size
-
-        _, idx = self.memory_age.topk(B, largest=False)
-
-        # ❌ OLD IN-PLACE: self.memory[idx] = episode.detach()
-
-        # ✅ NEW OUT-OF-PLACE ASSIGNMENT:
-        new_memory = self.memory.clone()
-        new_memory[idx] = episode.detach()
-        self.memory = new_memory  # Re-bind the buffer pointer safely
-
-        # 🔥 NEW: Store the generator label alongside the features
-        self.memory_labels[idx] = indexes.detach()
-
-        # These are fine to do in-place because they don't require gradients
-        new_age = self.memory_age.max() + torch.arange(
-            1, B + 1, device=episode.device
-        )
-        self.memory_age[idx] = new_age
-        self.memory_usage[idx] += 1
-
-    # ---------------------
-    # RoPE-aware read
-    # ---------------------
-
-    def read_memory(
-        self,
-        query: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-
-        B, D = query.shape
-
-        q = self.query_net(query)      # [B, D]
-        k = self.key_net(self.memory)  # [M, D]
-        v = self.value_net(self.memory)
-
-        # ---- positions ----
-        memory_pos = self.memory_age.long().clamp(max=self.max_positions - 1)
-        query_pos = (
-            self.memory_age.max().long() + 1 +
-            torch.arange(B, device=query.device)
-        ).clamp(max=self.max_positions - 1)
-
-        # ---- apply RoPE ----
-        q_rot, k_rot = self.apply_rotary_emb_1d(
-            q, k,
-            self.freqs_cis
-        )
-
-        # ---- attention ----
-        attn_scores = torch.matmul(q_rot, k_rot.T) / math.sqrt(D)
-        attn = F.softmax(attn_scores, dim=-1)
-
-        retrieved = torch.matmul(attn, v)
-
-        with torch.no_grad():
-            self.memory_usage += attn.sum(dim=0)
-
-        return retrieved, attn
-
-    # ---------------------
-
-    def forward(self, episode, mode="read_write", indexes=None):
-        if mode == "write":
-            self.write_memory(episode, indexes=indexes)
-            return episode, None
-
-        if mode == "read":
-            return self.read_memory(episode)
-
-        if mode == "read_write":
-            out, attn = self.read_memory(episode)
-            self.write_memory(episode, indexes=indexes)
-            return out, attn
-
-        raise ValueError(mode)
-
-
-class EpisodicMemoryRoPEExp(nn.Module):
-    """
-    Larimar-style episodic memory with RoPE applied to queries and keys.
-
-    RoPE can use either:
-    - memory_age: temporal write order, recommended
-    - slot: fixed memory slot index
-    """
-
-    def __init__(
-        self,
-        memory_size: int,
-        episode_dim: int,
-        rope_theta: float = 10000.0,
-    ):
-        super().__init__()
-
-        assert episode_dim % 2 == 0, "RoPE requires even dimension"
-
-        self.memory_size = memory_size
-        self.episode_dim = episode_dim
-        self.rope_theta = rope_theta
-
-        self.register_buffer("memory", torch.zeros(memory_size, episode_dim))
-        self.register_buffer("memory_age", torch.zeros(memory_size))
-        self.register_buffer("memory_usage", torch.zeros(memory_size))
-
-        # 🔥 NEW: Buffer to track the generator ID (e.g., 0=Real, 1=SD, 2=Mistral)
-        self.register_buffer("memory_labels", torch.zeros(
-            memory_size, dtype=torch.long))
-
-        self.query_net = nn.Linear(episode_dim, episode_dim)
-        self.key_net = nn.Linear(episode_dim, episode_dim)
-        self.value_net = nn.Linear(episode_dim, episode_dim)
-
-        # Precompute large enough RoPE table
-        self.max_positions = 10000
-        self.register_buffer(
-            "freqs_cis",
-            self.compute_cis_1d(episode_dim, self.max_positions, rope_theta),
-        )
-
-    def compute_cis_1d(self, dim: int, seq_len: int, theta: float = 10000.0):
-        """
-        1D RoPE frequencies (complex exponential form)
-        returns: [seq_len, dim//2] complex tensor
-        """
-        freqs = 1.0 / (theta ** (torch.arange(0, dim, 2).float() / dim))
-        positions = torch.arange(seq_len).float()
-
-        freqs = torch.outer(positions, freqs)  # [seq_len, dim/2]
-
-        freqs_cis = torch.polar(torch.ones_like(freqs), freqs)  # complex
-        return freqs_cis  # [seq_len, dim/2]
 
     def apply_rotary_emb_1d(self, xq, xk, freqs_cis, query_pos, memory_pos):
         """
@@ -521,10 +371,12 @@ class EpisodicMemoryRoPEExp(nn.Module):
     # ---------------------
     # RoPE-aware read
     # ---------------------
+
     def read_memory(
         self,
         query: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:  # Added 3rd return type
+        top_k: int = None
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
 
         B, D = query.shape
 
@@ -540,7 +392,11 @@ class EpisodicMemoryRoPEExp(nn.Module):
         ).clamp(max=self.max_positions - 1)
 
         # ---- apply RoPE ----
-        # ✅ FIX: Pass the positions into the function
+        # q_rot, k_rot = self.apply_rotary_emb_1d(
+        #     q, k,
+        #     self.freqs_cis
+        # )
+
         q_rot, k_rot = self.apply_rotary_emb_1d(
             q, k,
             self.freqs_cis,
@@ -550,9 +406,26 @@ class EpisodicMemoryRoPEExp(nn.Module):
 
         # ---- attention ----
         attn_scores = torch.matmul(q_rot, k_rot.T) / math.sqrt(D)
-        attn = F.softmax(attn_scores, dim=-1)  # This is A_{i,j}
+        if top_k is None:
+            attn = F.softmax(attn_scores, dim=-1)
 
-        retrieved = torch.matmul(attn, v)
+            retrieved = torch.matmul(attn, v)
+        else:
+            # 2. Get the values and indices of the top K scores
+            topk_scores, topk_indices = torch.topk(
+                attn_scores, k=top_k, dim=-1)
+
+            # 3. Create a mask of negative infinities
+            sparse_scores = torch.full_like(attn_scores, float('-inf'))
+
+            # 4. Scatter the top K scores back into the mask
+            sparse_scores.scatter_(dim=-1, index=topk_indices, src=topk_scores)
+
+            # 5. Apply Softmax. The -inf values become 0 weight.
+            attn = F.softmax(sparse_scores, dim=-1)
+
+            # 6. Retrieve (this is now a weighted average of ONLY the top 10)
+            retrieved = torch.matmul(attn, v)
 
         with torch.no_grad():
             self.memory_usage += attn.sum(dim=0)
@@ -562,117 +435,24 @@ class EpisodicMemoryRoPEExp(nn.Module):
             distance_matrix = torch.abs(
                 query_pos.unsqueeze(1) - memory_pos.unsqueeze(0))
 
-        # Return the distance matrix temporarily for your experiment
         return retrieved, attn, distance_matrix
 
     # ---------------------
 
-    def forward(self, episode, mode="read_write", indexes=None):
+    def forward(self, episode, mode="read_write", indexes=None, top_k=None):
         if mode == "write":
-            self.write_memory(episode, indexes)
+            self.write_memory(episode, indexes=indexes)
             return episode, None
 
         if mode == "read":
-            return self.read_memory(episode)
+            return self.read_memory(episode, top_k=top_k)
 
         if mode == "read_write":
-            out, attn, distance = self.read_memory(episode)
-            self.write_memory(episode, indexes)
-            return out, attn
+            out, attn, dist = self.read_memory(episode, top_k=top_k)
+            self.write_memory(episode, indexes=indexes)
+            return out, attn, dist
 
         raise ValueError(mode)
-
-
-# class MemoryAugmentedDetector(nn.Module):
-#     def __init__(
-#         self,
-#         feature_dim: int,
-#         out_dim: int = 1,
-#         use_memory: str = "linear",
-#         memory_size: int = 512,
-#         memory_mode: str = "read_write",
-#         fusion_type: str = "concat",
-#     ):
-#         super().__init__()
-#         self.feature_dim = feature_dim
-#         self.use_memory = use_memory
-#         self.memory_mode = memory_mode
-#         self.fusion_type = fusion_type
-
-#         if use_memory == "linear":
-#             self.episodic_memory = EpisodicMemory(
-#                 memory_size=memory_size,
-#                 episode_dim=feature_dim
-#             )
-#         elif use_memory == "rope":
-#             self.episodic_memory = EpisodicMemoryRoPE(
-#                 memory_size=memory_size,
-#                 episode_dim=feature_dim
-#             )
-#         else:
-#             self.episodic_memory = None
-
-#         classifier_in_dim = feature_dim * \
-#             2 if (use_memory and fusion_type == "concat") else feature_dim
-#         self.classifier = nn.Linear(classifier_in_dim, out_dim)
-
-#     def fuse_with_memory(self, x: torch.Tensor, retrieved: torch.Tensor) -> torch.Tensor:
-#         if self.fusion_type == "concat":
-#             return torch.cat([x, retrieved], dim=1)
-#         elif self.fusion_type == "add":
-#             return x + retrieved
-#         else:
-#             raise ValueError(f"Unsupported fusion_type: {self.fusion_type}")
-
-#     def apply_memory(self, x: torch.Tensor):
-#         attention_weights = None
-
-#         if not self.use_memory or self.memory_mode == "off":
-#             return x, attention_weights
-
-#         if self.memory_mode == "read":
-#             retrieved, attention_weights = self.episodic_memory(
-#                 x, self.memory_mode)
-#             x = self.fuse_with_memory(x, retrieved)
-#             return x, attention_weights
-
-#         elif self.memory_mode == "read_write":
-#             # only READ here
-#             retrieved, attention_weights = self.episodic_memory(
-#                 x, self.memory_mode)
-#             x = self.fuse_with_memory(x, retrieved)
-#             return x, attention_weights
-
-#         elif self.memory_mode == "write":
-#             return x, attention_weights
-
-#         else:
-#             raise ValueError(f"Invalid memory_mode: {self.memory_mode}")
-
-#     # 🔥 NEW: clean control functions
-#     def set_memory_mode(self, mode: str):
-#         assert mode in ["read_write", "read", "off"]
-#         self.memory_mode = mode
-
-#     def reset_memory(self):
-#         if self.use_memory and getattr(self, "episodic_memory", None) is not None:
-#             self.episodic_memory.reset_memory()
-
-#     def feature_extractor(self, inputs, return_interpretability: bool = False):
-#         raise NotImplementedError
-
-#     def forward(self, inputs, return_attention: bool = False, return_interpretability: bool = False):
-#         x, text_attention = self.feature_extractor(
-#             inputs, return_interpretability)
-#         x, attention_weights = self.apply_memory(x)
-#         logits = self.classifier(x)
-
-#         if return_attention:
-#             return logits, attention_weights
-#         if return_interpretability:
-#             return logits, text_attention
-
-#         return logits
 
 
 class MemoryAugmentedDetector(nn.Module):
@@ -762,7 +542,7 @@ class MemoryAugmentedDetector(nn.Module):
         else:
             # ORIGINAL LOGIC: Joint Memory
             if self.memory_mode in ["read", "read_write"]:
-                retrieved, attention_weights = self.episodic_memory(
+                retrieved, attention_weights, distance = self.episodic_memory(
                     x, self.memory_mode, indexes=indexes)
                 x_out = self.fuse_with_memory(x, retrieved)
 
@@ -790,6 +570,7 @@ class MemoryAugmentedDetector(nn.Module):
                     outputs["x_output"] = x_out
                     outputs["retrieved_memory"] = retrieved
                     outputs["memory_attention_weights"] = attention_weights
+                    outputs["distance"] = distance
                     outputs["topk_scores"] = topk_scores
                     outputs["topk_indices"] = topk_indices
                     outputs["top10_vectors"] = top10_vectors
@@ -819,12 +600,12 @@ class MemoryAugmentedDetector(nn.Module):
     def feature_extractor(self, inputs, return_interpretability: bool = False):
         raise NotImplementedError
 
-    def forward(self, inputs, indexes=None, return_memory: bool = False, return_interpretability: bool = False):
+    def forward(self, inputs, indexes=None, return_memory: bool = False, return_interpretability: bool = False, top_k: int = None):
         outputs = {}
         x, text_attention = self.feature_extractor(
             inputs, return_interpretability)
         x, outputs = self.apply_memory(
-            x, indexes=indexes, return_memory=return_memory)
+            x, indexes=indexes, return_memory=return_memory, top_k=top_k)
 
         if self.feature_projection is not None:
             x = self.feature_projection(x)
