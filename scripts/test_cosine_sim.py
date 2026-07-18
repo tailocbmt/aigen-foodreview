@@ -215,40 +215,33 @@ print(f'Loaded Testing File: {test_file}.')
 class CoherenceAccumulator:
     """
     Accumulates features and labels during inference.
-    Replace your current results storage with this.
+    Now uses explicit image_dim and text_dim.
     """
 
-    def __init__(self):
+    def __init__(self, image_dim: int = 512, text_dim: int = 312):
+        self.image_dim = image_dim
+        self.text_dim = text_dim
         self.x_image_list = []      # Pre-memory image features
         self.x_text_list = []       # Pre-memory text features
-        # Post-memory image features (from x_output)
-        self.o_image_list = []
-        self.o_text_list = []       # Post-memory text features (from x_output)
+        self.o_image_list = []      # Post-memory image features
+        self.o_text_list = []       # Post-memory text features
         self.text_labels = []       # [0 or 1]
         self.image_labels = []      # [0 or 1]
-        self.preds_text = []        # (Optional: for accuracy tracking)
-        self.preds_image = []       # (Optional: for accuracy tracking)
+        self.preds_text = []
+        self.preds_image = []
 
     def add_sample(self, x_input: np.ndarray, x_output: np.ndarray,
                    label: np.ndarray, preds: np.ndarray = None):
         """
-        Add a single sample to the accumulator.
-
-        Args:
-            x_input: Concatenated pre-memory features [2*D]
-            x_output: Concatenated post-memory features [2*D]
-            label: Multi-label array [text_label, image_label] (0=Real, 1=Fake)
-            preds: (Optional) Predictions array [text_pred, image_pred]
+        x_input and x_output are concatenated vectors of shape (image_dim + text_dim,)
         """
-        D = 312  # Infer the dimension from the input shape
-
         # Slice pre-memory
-        x_image = x_input[:D]
-        x_text = x_input[D:]
+        x_image = x_input[:self.image_dim]
+        x_text = x_input[self.image_dim:]
 
         # Slice post-memory
-        o_image = x_output[:D]
-        o_text = x_output[D:]
+        o_image = x_output[:self.image_dim]
+        o_text = x_output[self.image_dim:]
 
         self.x_image_list.append(x_image)
         self.x_text_list.append(x_text)
@@ -262,7 +255,6 @@ class CoherenceAccumulator:
             self.preds_image.append(preds[1])
 
     def get_results(self) -> Dict[str, np.ndarray]:
-        """Convert lists to numpy arrays for analysis."""
         return {
             'x_image': np.array(self.x_image_list),
             'x_text': np.array(self.x_text_list),
@@ -272,47 +264,41 @@ class CoherenceAccumulator:
             'image_label': np.array(self.image_labels),
         }
 
-
 # =============================================================================
 # PART 2: MODIFIED INFERENCE LOOP (Integrate this into your existing script)
 # =============================================================================
+
 
 def run_inference_and_collect(
     model,
     dataloader,
     device,
-    text_index: int = 412  # Your D value (824/2). Set appropriately.
+    image_dim: int = 512,
+    text_dim: int = 312,
+    max_samples: int = None
 ) -> CoherenceAccumulator:
     """
-    Run inference on the dataloader and collect pre/post features.
-
-    This replaces your current inference loop. It retains all your existing
-    visualization logic but additionally accumulates features for Experiment 6.
+    Run inference and collect pre/post features.
     """
     model.eval()
-    accumulator = CoherenceAccumulator()
+    accumulator = CoherenceAccumulator(image_dim=image_dim, text_dim=text_dim)
 
-    # Store memory indices for visualization (optional)
-
-    curr = 0
-    max_count = 100
+    count = 0
     with torch.no_grad():
         for sample in tqdm(dataloader, desc="Collecting Coherence Features"):
-            # === YOUR EXISTING INPUT PREPARATION ===
             inputs_vis = {key: tensor.unsqueeze(0).squeeze(1).to(device)
                           for key, tensor in sample['inputs'].items()}
             input_label = sample["label"].unsqueeze(0).squeeze(1).cpu().numpy()
 
-            # === FORWARD PASS (with memory retrieval) ===
             output, retrieved = model(inputs_vis, return_memory=True)
             probs = torch.sigmoid(output)
             preds = (probs > 0.5).int().cpu().numpy().flatten()
 
-            # === EXTRACT FEATURES FROM RETRIEVED ===
-            x_input = retrieved["x_input"].squeeze().cpu().numpy()   # [2*D]
-            x_output = retrieved["x_output"].squeeze().cpu().numpy()  # [2*D]
+            x_input = retrieved["x_input"].squeeze(
+            ).cpu().numpy()   # shape (824,)
+            x_output = retrieved["x_output"].squeeze(
+            ).cpu().numpy()  # shape (824,)
 
-            # === STORE IN ACCUMULATOR ===
             accumulator.add_sample(
                 x_input=x_input,
                 x_output=x_output,
@@ -320,8 +306,8 @@ def run_inference_and_collect(
                 preds=preds
             )
 
-            curr += 1
-            if curr > max_count:
+            count += 1
+            if max_samples and count >= max_samples:
                 break
 
     return accumulator
@@ -503,26 +489,12 @@ def run_experiment_6_from_model(
     model,
     dataloader,
     device,
-    text_index: int = 312,  # Your D value (half of x_input dimension)
+    image_dim: int = 512,
+    text_dim: int = 312,
     output_dir: str = "./experiment_6_results"
 ):
     """
     Full pipeline for Experiment 6.
-
-    Call this after training, using your test/validation dataloader.
-
-    Args:
-        model: Your trained model
-        dataloader: Test/Val dataloader (must return dict with 'inputs' and 'label')
-        device: torch.device
-        text_index: The dimension D of each modality (x_input shape is 2*D)
-        output_dir: Where to save results
-
-    Example:
-        >>> model = MyModel()
-        >>> model.load_state_dict(torch.load('best.pth'))
-        >>> test_loader = get_test_loader()
-        >>> stats, df = run_experiment_6_from_model(model, test_loader, device)
     """
     print("=" * 70)
     print("🔬 EXPERIMENT 6: Cross-Modal Coherence Analysis (Multi-Label)")
@@ -533,7 +505,9 @@ def run_experiment_6_from_model(
         model=model,
         dataloader=dataloader,
         device=device,
-        text_index=text_index
+        image_dim=image_dim,
+        text_dim=text_dim,
+        max_samples=None   # set to e.g. 500 for quick test
     )
 
     print(f"✅ Collected {len(accumulator.x_image_list)} samples")
@@ -542,7 +516,7 @@ def run_experiment_6_from_model(
     stats_df, df = analyze_accumulated_results(
         accumulator, output_dir=output_dir)
 
-    # Step 3: Final summary
+    # Final summary
     print("\n" + "=" * 70)
     print("📌 KEY FINDINGS FOR YOUR PROFESSOR:")
     print("=" * 70)
@@ -557,77 +531,18 @@ def run_experiment_6_from_model(
 
 
 # =============================================================================
-# PART 5: HOW TO USE IN YOUR EXISTING SCRIPT
-# =============================================================================
-
-"""
-HOW TO INTEGRATE INTO YOUR CURRENT SCRIPT:
-
-1. Copy this entire file into your project as `experiment_6.py`
-
-2. In your main script, import and call:
-
-   from experiment_6 import run_experiment_6_from_model
-
-   # After training or loading your model:
-   model.eval()
-   stats_df, df = run_experiment_6_from_model(
-       model=model,
-       dataloader=test_loader,  # your test dataloader
-       device=device,
-       text_index=412,          # YOUR D value. If x_input is 824, D=412
-       output_dir="./experiment_6_results"
-   )
-
-3. That's it! The code will:
-   - Reuse your existing inference loop
-   - Extract pre-memory (x_input) and post-memory (x_output) features
-   - Compute cosine similarity before and after memory
-   - Stratify by your 4 multi-label groups
-   - Generate publication-ready figures
-
-ASSUMPTIONS (Matches your code):
-- sample is a dict with keys: 'inputs' and 'label'
-- inputs is a dict of tensors (image, text, etc.)
-- label is a tensor of shape [2] -> [text_label, image_label]
-- model(inputs, return_memory=True) returns (output, retrieved)
-- retrieved contains 'x_input', 'x_output', and optionally 'top10_labels'
-"""
-
-
-# =============================================================================
-# QUICK SANITY CHECK
+# HOW TO CALL IT (at the bottom of your script)
 # =============================================================================
 
 if __name__ == "__main__":
-    # # Dummy test with your exact data shapes
-    # print("Running integration test with dummy data...")
+    # ... (your existing model and dataloader loading code) ...
 
-    # # Simulate your retrieved outputs
-    # D = 412
-    # N_samples = 100
-
-    # class DummyRetrieved:
-    #     def __init__(self):
-    #         self.x_input = torch.randn(1, 2*D)
-    #         self.x_output = torch.randn(1, 2*D)
-    #         self.top10_labels = torch.randint(0, 512, (1, 10))
-
-    # # Simulate accumulator
-    # acc = CoherenceAccumulator()
-    # for i in range(N_samples):
-    #     label = np.random.randint(0, 2, 2)
-    #     preds = np.random.randint(0, 2, 2)
-    #     x_input = np.random.randn(2*D)
-    #     x_output = np.random.randn(2*D)
-    #     acc.add_sample(x_input, x_output, label, preds)
-
-    # # Analyze
-    # stats, df = analyze_accumulated_results(
-    #     acc, output_dir="./test_experiment_6")
-    # print("✅ Integration test passed!")
-    run_experiment_6_from_model(
+    # Run the experiment
+    stats_df, df = run_experiment_6_from_model(
         model=model,
-        dataloader=test,
-        device=device
+        dataloader=test_dataloader,   # use your test loader
+        device=device,
+        image_dim=512,                # image feature dimension
+        text_dim=312,                 # text feature dimension
+        output_dir="./experiment_6_results"
     )
