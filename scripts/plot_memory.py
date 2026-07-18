@@ -327,8 +327,10 @@ def plot_mismatch_example(folder, SEED=42):
             preds = (probs > 0.5).int().cpu().numpy()
             results = (input_label == preds)
 
-            is_correct = bool(results.item()) if hasattr(
-                results, 'item') else bool(results[0])
+            # Flatten to shape [2] and extract individual booleans
+            results_flat = results.flatten()
+            text_correct = bool(results_flat[0])
+            image_correct = bool(results_flat[1])
 
         # Retrieve Top-K indices
         # Squeeze to handle potential batch dimensions like [1, 10] -> [10]
@@ -376,11 +378,29 @@ def plot_mismatch_example(folder, SEED=42):
         # 6. Create the 2x2 grid figure
         fig, axes = plt.subplots(2, 2, figsize=(16, 14))
 
-        # Set dynamic title based on prediction correctness
-        pred_text = "CORRECT" if is_correct else "INCORRECT"
-        title_color = "darkgreen" if is_correct else "darkred"
-        fig.suptitle(f"t-SNE Retrieval Match (Test Sample {i}) | Prediction: {pred_text}",
-                     fontsize=18, fontweight='bold', color=title_color)
+        # --- MULTI-COLOR TITLE LOGIC ---
+        # Main Title (Black)
+        fig.suptitle(f"t-SNE Retrieval Match (Test Sample {i})",
+                     fontsize=18, fontweight='bold', y=0.98)
+
+        # Determine individual colors and status text
+        text_color = "forestgreen" if text_correct else "crimson"
+        image_color = "forestgreen" if image_correct else "crimson"
+        text_status = "CORRECT" if text_correct else "INCORRECT"
+        image_status = "CORRECT" if image_correct else "INCORRECT"
+
+        # Subtitle: Anchor 1 joins the Text label and its colored status
+        fig.text(0.42, 0.95, "Prediction -> Text: ",
+                 ha='right', fontsize=16, fontweight='bold')
+        fig.text(0.42, 0.95, text_status, ha='left', fontsize=16,
+                 fontweight='bold', color=text_color)
+
+        # Subtitle: Anchor 2 joins the Image label and its colored status
+        fig.text(0.55, 0.95, "  |  Image: ", ha='right',
+                 fontsize=16, fontweight='bold')
+        fig.text(0.55, 0.95, image_status, ha='left', fontsize=16,
+                 fontweight='bold', color=image_color)
+        # -------------------------------
 
         # Helper function to plot each subplot cleanly
         def plot_axis(ax, memory_pts, input_pt, output_pt, labels, names_dict, title):
