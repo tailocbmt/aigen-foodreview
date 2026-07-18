@@ -318,7 +318,7 @@ def plot_mismatch_example(folder, SEED=42):
         # 2. Forward pass for this specific sample
         inputs_vis = {key: tensor.unsqueeze(0).squeeze(1).to(device)
                       for key, tensor in sample['inputs'].items()}
-        input_label = sample["label"].squeeze(1).cpu().numpy()
+        input_label = sample["label"].unsqueeze(0).squeeze(1).cpu().numpy()
 
         # We don't track gradients for visualization
         with torch.no_grad():
