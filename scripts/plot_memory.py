@@ -391,12 +391,12 @@ def plot_mismatch_example(folder, SEED=42):
 
         # Subtitle: Anchor 1 joins the Text label and its colored status
 # Subtitle - moved slightly down from the main title (y=0.94)
-        fig.text(0.42, 0.94, "Prediction -> Text: ",
+        fig.text(0.42, 0.94, "Text: ",
                  ha='right', fontsize=16, fontweight='bold')
         fig.text(0.42, 0.94, text_status, ha='left', fontsize=16,
                  fontweight='bold', color=text_color)
 
-        fig.text(0.55, 0.94, "  |  Image: ", ha='right',
+        fig.text(0.55, 0.94, "Image: ", ha='right',
                  fontsize=16, fontweight='bold')
         fig.text(0.55, 0.94, image_status, ha='left', fontsize=16,
                  fontweight='bold', color=image_color)
@@ -404,24 +404,40 @@ def plot_mismatch_example(folder, SEED=42):
 
         # Helper function to plot each subplot cleanly
         def plot_axis(ax, memory_pts, input_pt, output_pt, labels, names_dict, title):
-            # A) Plot standard memory slots
-            for label_id in np.unique(labels):
+            # Grab matplotlib's default color cycle
+            colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+            # Dummy scatter for the legend so "Top-10 Retrieved" still appears
+            # without adding multiple entries for every color
+            ax.scatter([], [], marker='D', facecolors='white', edgecolors='black',
+                       s=100, linewidths=1.2, label='Top-10 Retrieved')
+
+            # A & B) Plot standard memory slots and highlight Top-K per class
+            for i, label_id in enumerate(np.unique(labels)):
                 idx = (labels == label_id)
                 display_name = names_dict.get(label_id, str(label_id))
-                ax.scatter(memory_pts[idx, 0], memory_pts[idx, 1],
-                           label=display_name, alpha=0.3, s=40)
 
-            # B) Highlight the Top-K retrieved memory slots (Cyan Diamonds)
-            ax.scatter(memory_pts[topk_positions, 0], memory_pts[topk_positions, 1],
-                       marker='D', facecolors='cyan', edgecolors='black', s=100, linewidths=1.2,
-                       label='Top-10 Retrieved', zorder=5)
+                # Get the assigned color for this class
+                c = colors[i % len(colors)]
+
+                # Plot normal memory points
+                ax.scatter(memory_pts[idx, 0], memory_pts[idx, 1],
+                           label=display_name, alpha=0.4, s=40, color=c)
+
+                # Find which of the Top-K points belong to THIS specific class
+                class_topk_pos = [
+                    pos for pos in topk_positions if labels[pos] == label_id]
+
+                if class_topk_pos:
+                    # Plot the Top-K diamonds using the exact same color
+                    ax.scatter(memory_pts[class_topk_pos, 0], memory_pts[class_topk_pos, 1],
+                               alpha=0.9, marker='D', facecolors=c, edgecolors='black', s=100, linewidths=1.2,
+                               zorder=5)
 
             # Add Text Labels for Top-K points
             for i, pos in enumerate(topk_positions):
                 x, y = memory_pts[pos, 0], memory_pts[pos, 1]
-                raw_label = labels[pos]
-                display_label = names_dict.get(
-                    raw_label, str(raw_label)) + f" {i}"
+                display_label = str(i)
 
                 # Annotate with a small offset and a readable background box
                 ax.annotate(display_label, (x, y), xytext=(6, 6),
