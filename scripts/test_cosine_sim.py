@@ -507,7 +507,7 @@ def run_experiment_6_from_model(
         device=device,
         image_dim=image_dim,
         text_dim=text_dim,
-        max_samples=None   # set to e.g. 500 for quick test
+        max_samples=500   # set to e.g. 500 for quick test
     )
 
     print(f"✅ Collected {len(accumulator.x_image_list)} samples")
