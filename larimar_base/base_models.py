@@ -66,7 +66,7 @@ class kNNMemory(nn.Module):
         self,
         memory_size: int,
         episode_dim: int,
-        k: int = 4,  # The number of neighbors to retrieve
+        k: int = 1,  # The number of neighbors to retrieve
     ):
         super().__init__()
         self.memory_size = memory_size
@@ -505,6 +505,7 @@ class MemoryAugmentedDetector(nn.Module):
             2 if (self.use_memory and fusion_type == "concat") else feature_dim
         self.classifier = nn.Linear(classifier_in_dim, out_dim)
 
+    @staticmethod
     def load_episodic_memory_weights_only(model, checkpoint_path: str):
         # 1. Load the saved weights (often nested under 'state_dict' or 'model')
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
