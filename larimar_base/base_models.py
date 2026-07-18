@@ -205,7 +205,8 @@ class EpisodicMemory(nn.Module):
     def forward(
         self,
         episode: torch.Tensor,
-        mode: str = "read_write"
+        mode: str = "read_write",
+        indexes=None
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         if mode == "write":
             return self.write_memory(episode), None
