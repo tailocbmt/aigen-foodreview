@@ -317,13 +317,19 @@ def run_inference_and_collect(
 # PART 3: ANALYSIS AND VISUALIZATION (Same as before, with small updates)
 # =============================================================================
 
-def compute_cosine_similarity(img_feats: np.ndarray, txt_feats: np.ndarray) -> np.ndarray:
-    """Compute pairwise cosine similarity."""
-    img_norm = img_feats / \
-        (np.linalg.norm(img_feats, axis=1, keepdims=True) + 1e-8)
-    txt_norm = txt_feats / \
-        (np.linalg.norm(txt_feats, axis=1, keepdims=True) + 1e-8)
-    return np.sum(img_norm * txt_norm, axis=1)
+def compute_correlation_similarity(img_feats: np.ndarray, txt_feats: np.ndarray) -> np.ndarray:
+    """Per‑sample Pearson correlation between image and text features."""
+    corr_list = []
+    for i in range(img_feats.shape[0]):
+        img_vec = img_feats[i].flatten()
+        txt_vec = txt_feats[i].flatten()
+        # If either vector has constant values, correlation is undefined; set to 0.
+        if np.std(img_vec) == 0 or np.std(txt_vec) == 0:
+            corr_list.append(0.0)
+        else:
+            corr = np.corrcoef(img_vec, txt_vec)[0, 1]
+            corr_list.append(corr)
+    return np.array(corr_list)
 
 
 def get_group_id(text_label: np.ndarray, image_label: np.ndarray) -> np.ndarray:
@@ -358,8 +364,10 @@ def analyze_accumulated_results(
     results = accumulator.get_results()
 
     # === Compute similarities ===
-    pre_sim = compute_cosine_similarity(results['x_image'], results['x_text'])
-    post_sim = compute_cosine_similarity(results['o_image'], results['o_text'])
+    pre_sim = compute_correlation_similarity(
+        results['x_image'], results['x_text'])
+    post_sim = compute_correlation_similarity(
+        results['o_image'], results['o_text'])
     delta = post_sim - pre_sim
 
     # === Build DataFrame ===
