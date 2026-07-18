@@ -390,15 +390,15 @@ def plot_mismatch_example(folder, SEED=42):
         image_status = "CORRECT" if image_correct else "INCORRECT"
 
         # Subtitle: Anchor 1 joins the Text label and its colored status
-        fig.text(0.42, 0.95, "Prediction -> Text: ",
+# Subtitle - moved slightly down from the main title (y=0.94)
+        fig.text(0.42, 0.94, "Prediction -> Text: ",
                  ha='right', fontsize=16, fontweight='bold')
-        fig.text(0.42, 0.95, text_status, ha='left', fontsize=16,
+        fig.text(0.42, 0.94, text_status, ha='left', fontsize=16,
                  fontweight='bold', color=text_color)
 
-        # Subtitle: Anchor 2 joins the Image label and its colored status
-        fig.text(0.55, 0.95, "  |  Image: ", ha='right',
+        fig.text(0.55, 0.94, "  |  Image: ", ha='right',
                  fontsize=16, fontweight='bold')
-        fig.text(0.55, 0.95, image_status, ha='left', fontsize=16,
+        fig.text(0.55, 0.94, image_status, ha='left', fontsize=16,
                  fontweight='bold', color=image_color)
         # -------------------------------
 
@@ -417,28 +417,28 @@ def plot_mismatch_example(folder, SEED=42):
                        label='Top-10 Retrieved', zorder=5)
 
             # Add Text Labels for Top-K points
-            for pos in topk_positions:
+            for i, pos in enumerate(topk_positions):
                 x, y = memory_pts[pos, 0], memory_pts[pos, 1]
                 raw_label = labels[pos]
                 display_label = names_dict.get(
-                    raw_label, str(raw_label)) + f" {pos}"
+                    raw_label, str(raw_label)) + f" {i}"
 
                 # Annotate with a small offset and a readable background box
                 ax.annotate(display_label, (x, y), xytext=(6, 6),
-                            textcoords='offset points', fontsize=9, fontweight='bold',
+                            textcoords='offset points', fontsize=8, fontweight='bold',
                             bbox=dict(boxstyle="round,pad=0.2",
                                       fc="white", alpha=0.7, ec="gray"),
                             zorder=6)
 
             # C) Plot the actual query input (Large Red Star)
             ax.scatter(input_pt[0], input_pt[1],
-                       marker='*', color='red', s=400, edgecolor='black', linewidths=1,
-                       label='Input Query (x_input)', zorder=7)
+                       marker='*', color='red', s=250, edgecolor='black', linewidths=1,
+                       label='Input', zorder=7)
 
             # D) Plot the output query (Large Gold Triangle)
             ax.scatter(output_pt[0], output_pt[1],
-                       marker='^', color='gold', s=350, edgecolor='black', linewidths=1,
-                       label='Output (x_output)', zorder=7)
+                       marker='^', color='gold', s=200, edgecolor='black', linewidths=1,
+                       label='Output', zorder=7)
 
             # E) Draw an arrow pointing from x_input to x_output
             ax.annotate("",
@@ -447,7 +447,7 @@ def plot_mismatch_example(folder, SEED=42):
                         # Origin (where the arrow starts)
                         xytext=(input_pt[0], input_pt[1]),
                         arrowprops=dict(
-                            arrowstyle="->", color="black", lw=2.5, ls="--", shrinkA=8, shrinkB=8),
+                            arrowstyle="-", color="black", lw=1.5, ls="--", shrinkA=8, shrinkB=8),
                         zorder=6)  # Kept just below the markers so it doesn't cross over them
 
             ax.set_title(title)
@@ -464,7 +464,7 @@ def plot_mismatch_example(folder, SEED=42):
         plot_axis(axes[1, 1], image_2d, image_x_in, image_x_out, image_labels,
                   img_names, "Image-Only Split (Colored by Image Source)")
 
-        plt.tight_layout()
+        plt.tight_layout(rect=[0, 0, 1, 0.88])
 
         # Save with dynamic filename so they don't overwrite each other
         save_path = os.path.join(folder, f"example_{i}_tsne.png")
