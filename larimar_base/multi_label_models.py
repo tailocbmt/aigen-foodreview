@@ -172,11 +172,11 @@ class FakeNewsMultimodalWMemory(MemoryAugmentedDetector):
         self.image_encoder.classifier = nn.Identity()
 
         # Memory dim
-        memory_dim = text_dim + image_dim
+        self.memory_dim = text_dim + image_dim
 
         # Fusion classifier
         self.classifier = nn.Sequential(
-            nn.Linear(memory_dim, 512),
+            nn.Linear(self.memory_dim, 512),
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(512, out_dim)
@@ -241,12 +241,11 @@ class FakeNewsMultimodalTMemoryOnly(FakeNewsMultimodalWMemory):
             text_backbone,
             vision_backbone
         )
-        self.memory_project_dim = 2816
         self.feature_projection = nn.Linear(
-            feature_dim, self.memory_project_dim)
+            self.memory_dim, feature_dim)
 
         self.classifier = nn.Sequential(
-            nn.Linear(self.memory_project_dim, 512),
+            nn.Linear(feature_dim, 512),
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(512, out_dim)
