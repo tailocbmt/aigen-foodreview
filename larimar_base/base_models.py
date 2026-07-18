@@ -66,7 +66,7 @@ class kNNMemory(nn.Module):
         self,
         memory_size: int,
         episode_dim: int,
-        k: int = 5,  # The number of neighbors to retrieve
+        k: int = 4,  # The number of neighbors to retrieve
     ):
         super().__init__()
         self.memory_size = memory_size
@@ -504,6 +504,39 @@ class MemoryAugmentedDetector(nn.Module):
         classifier_in_dim = feature_dim * \
             2 if (self.use_memory and fusion_type == "concat") else feature_dim
         self.classifier = nn.Linear(classifier_in_dim, out_dim)
+
+    def load_episodic_memory_weights_only(model, checkpoint_path: str):
+        # 1. Load the saved weights (often nested under 'state_dict' or 'model')
+        checkpoint = torch.load(checkpoint_path, map_location="cpu")
+
+        # Extract the state dict if it's wrapped in a checkpoint dictionary
+        if "state_dict" in checkpoint:
+            state_dict = checkpoint["state_dict"]
+        elif "model" in checkpoint:
+            state_dict = checkpoint["model"]
+        else:
+            state_dict = checkpoint  # Assume the file is exactly the state_dict
+
+        # 2. Filter the state_dict for ONLY the memory keys
+        memory_state_dict = {}
+        for key, value in state_dict.items():
+            # Check for both joint and split prefixes
+            if key.startswith("episodic_memory."):
+                memory_state_dict[key] = value
+
+        if not memory_state_dict:
+            print("Warning: No episodic memory weights found in the checkpoint!")
+            return model
+
+        # 3. Load the filtered weights into the model
+        # strict=False is REQUIRED because we are intentionally ignoring the rest of the model (e.g. feature_projection)
+        model.load_state_dict(
+            memory_state_dict, strict=False)
+
+        print(
+            f"Successfully loaded {len(memory_state_dict)} memory parameter tensors.")
+
+        return model
 
     def fuse_with_memory(self, x: torch.Tensor, retrieved: torch.Tensor) -> torch.Tensor:
         if self.fusion_type == "concat":
