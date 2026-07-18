@@ -101,7 +101,7 @@ class kNNMemory(nn.Module):
         self.memory_age[idx] = new_age
 
     @torch.no_grad()
-    def read_memory(self, query: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def read_memory(self, query: torch.Tensor, indexes=None) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Retrieves top-k nearest neighbors based on raw Euclidean distance.
         """
