@@ -19,6 +19,7 @@ import torch
 from typing import Dict, List, Tuple
 
 from sklearn.model_selection import train_test_split
+from sklearn.cross_decomposition import CCA
 import json
 from transformers import AutoImageProcessor, AutoTokenizer, CLIPProcessor, CLIPModel, FlavaProcessor, FlavaModel
 from torch.utils.data import DataLoader, Subset
@@ -317,19 +318,32 @@ def run_inference_and_collect(
 # PART 3: ANALYSIS AND VISUALIZATION (Same as before, with small updates)
 # =============================================================================
 
-def compute_correlation_similarity(img_feats: np.ndarray, txt_feats: np.ndarray) -> np.ndarray:
-    """Per‑sample Pearson correlation between image and text features."""
-    corr_list = []
-    for i in range(img_feats.shape[0]):
-        img_vec = img_feats[i].flatten()
-        txt_vec = txt_feats[i].flatten()
-        # If either vector has constant values, correlation is undefined; set to 0.
-        if np.std(img_vec) == 0 or np.std(txt_vec) == 0:
-            corr_list.append(0.0)
-        else:
-            corr = np.corrcoef(img_vec, txt_vec)[0, 1]
-            corr_list.append(corr)
-    return np.array(corr_list)
+def compute_cca_similarity(img_feats: np.ndarray, txt_feats: np.ndarray, n_components=10) -> np.ndarray:
+    """
+    Per‑sample cosine similarity after projecting via CCA.
+    - img_feats: (N, D_img) – e.g., (N, 512)
+    - txt_feats: (N, D_txt) – e.g., (N, 312)
+    - Returns: (N,) cosine similarities in the common CCA space.
+    """
+    N = img_feats.shape[0]
+    if N < 2:
+        return np.zeros(N)
+
+    # Use at most min(D_img, D_txt, N-1) components
+    n_comp = min(n_components, img_feats.shape[1], txt_feats.shape[1], N - 1)
+    if n_comp < 1:
+        return np.zeros(N)
+
+    cca = CCA(n_components=n_comp)
+    cca.fit(img_feats, txt_feats)
+    img_trans, txt_trans = cca.transform(img_feats, txt_feats)
+
+    # Cosine similarity in the projected space
+    img_norm = img_trans / \
+        (np.linalg.norm(img_trans, axis=1, keepdims=True) + 1e-8)
+    txt_norm = txt_trans / \
+        (np.linalg.norm(txt_trans, axis=1, keepdims=True) + 1e-8)
+    return np.sum(img_norm * txt_norm, axis=1)
 
 
 def get_group_id(text_label: np.ndarray, image_label: np.ndarray) -> np.ndarray:
@@ -364,9 +378,9 @@ def analyze_accumulated_results(
     results = accumulator.get_results()
 
     # === Compute similarities ===
-    pre_sim = compute_correlation_similarity(
+    pre_sim = compute_cca_similarity(
         results['x_image'], results['x_text'])
-    post_sim = compute_correlation_similarity(
+    post_sim = compute_cca_similarity(
         results['o_image'], results['o_text'])
     delta = post_sim - pre_sim
 
