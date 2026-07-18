@@ -101,7 +101,7 @@ class kNNMemory(nn.Module):
         self.memory_age[idx] = new_age
 
     @torch.no_grad()
-    def read_memory(self, query: torch.Tensor, indexes=None) -> tuple[torch.Tensor, torch.Tensor]:
+    def read_memory(self, query: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Retrieves top-k nearest neighbors based on raw Euclidean distance.
         """
@@ -132,6 +132,21 @@ class kNNMemory(nn.Module):
         dummy_attn.scatter_(1, topk_indices, 1.0 / self.k)
 
         return retrieved, dummy_attn
+
+    def forward(
+        self,
+        episode: torch.Tensor,
+        mode: str = "read_write",
+        indexes=None
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+        if mode == "write":
+            return self.write_memory(episode), None
+        elif mode == "read":
+            return self.read_memory(episode)
+        else:
+            retrieved, attention_weights = self.read_memory(episode)
+            self.write_memory(episode)
+            return retrieved, attention_weights
 
 
 class EpisodicMemory(nn.Module):
