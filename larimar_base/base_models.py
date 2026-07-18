@@ -279,7 +279,7 @@ class EpisodicMemoryRoPE(nn.Module):
             self.compute_cis_1d(episode_dim, self.max_positions, rope_theta),
         )
 
-    def compute_cis_1d_old(self, dim: int, seq_len: int, theta: float = 10000.0):
+    def compute_cis_1d(self, dim: int, seq_len: int, theta: float = 10000.0):
         """
         1D RoPE frequencies (complex exponential form)
         returns: [seq_len, dim//2] complex tensor
@@ -292,7 +292,7 @@ class EpisodicMemoryRoPE(nn.Module):
         freqs_cis = torch.polar(torch.ones_like(freqs), freqs)  # complex
         return freqs_cis  # [seq_len, dim/2]
 
-    def apply_rotary_emb_1d(self, xq, xk, freqs_cis):
+    def apply_rotary_emb_1d_old(self, xq, xk, freqs_cis):
         """
         xq: [B, D]
         xk: [M, D]
