@@ -229,6 +229,7 @@ img_names = {
 
 # Only run for our custom FakeNews models as target layers differ for CLIP/FLAVA
 # 1. Extract the frozen memory matrix and both label sets
+TEXT_INDEX = 312
 text_labels, image_labels = [], []
 
 memory_matrix = model.episodic_memory.memory.detach().cpu().numpy()
@@ -244,8 +245,8 @@ image_labels = np.array(image_labels)
 
 # 2. Split the memory matrix into Text (312 dim) and Image (512 dim)
 # Assuming the vector format is [text_features, image_features]
-text_matrix = memory_matrix[:, :312]
-image_matrix = memory_matrix[:, 312:]  # 312 + 512 = 824
+text_matrix = memory_matrix[:, :TEXT_INDEX]
+image_matrix = memory_matrix[:, TEXT_INDEX:]  # 312 + 512 = 824
 
 
 def plot_multimodal_tsne(folder, SEED=42):
@@ -317,10 +318,17 @@ def plot_mismatch_example(folder, SEED=42):
         # 2. Forward pass for this specific sample
         inputs_vis = {key: tensor.unsqueeze(0).squeeze(1).to(device)
                       for key, tensor in sample['inputs'].items()}
+        input_label = sample["label"].squeeze(1).cpu().numpy()
 
         # We don't track gradients for visualization
         with torch.no_grad():
             output, retrieved = model(inputs_vis, return_memory=True)
+            probs = torch.sigmoid(output)
+            preds = (probs > 0.5).int().cpu().numpy()
+            results = (input_label == preds)
+
+            is_correct = bool(results.item()) if hasattr(
+                results, 'item') else bool(results[0])
 
         # Retrieve Top-K indices
         # Squeeze to handle potential batch dimensions like [1, 10] -> [10]
@@ -329,15 +337,20 @@ def plot_mismatch_example(folder, SEED=42):
         # Map the Top-K indices to integer positions (0-511) to plot them correctly
         topk_positions = [memory_index.index(idx) for idx in topk_index]
 
-        # 3. Extract x_input and prepare for t-SNE
+        # 3. Extract x_input, x_output and prepare for t-SNE
         x_input = retrieved["x_input"].squeeze().cpu().numpy()  # Shape: (824,)
-        x_text = x_input[:312]
-        x_image = x_input[312:]
+        x_text = x_input[:TEXT_INDEX]
+        x_image = x_input[TEXT_INDEX:]
+
+        x_output = retrieved["x_output"].squeeze(
+        ).cpu().numpy()  # Shape: (824,)
+        x_text_output = x_output[:TEXT_INDEX]
+        x_image_output = x_output[TEXT_INDEX:]
 
         # Append x_input to the end of the memory matrices
-        joint_data = np.vstack([memory_matrix, x_input])
-        text_data = np.vstack([text_matrix, x_text])
-        image_data = np.vstack([image_matrix, x_image])
+        joint_data = np.vstack([memory_matrix, x_input, x_output])
+        text_data = np.vstack([text_matrix, x_text, x_text_output])
+        image_data = np.vstack([image_matrix, x_image, x_image_output])
 
         # 4. Apply t-SNE
         # (Must be done per loop so x_input gets properly mapped into the space)
@@ -346,47 +359,89 @@ def plot_mismatch_example(folder, SEED=42):
         text_2d_all = tsne.fit_transform(text_data)
         image_2d_all = tsne.fit_transform(image_data)
 
-        # Separate the base memory points from the x_input point (the very last item)
-        joint_2d, joint_x = joint_2d_all[:-1], joint_2d_all[-1]
-        text_2d, text_x = text_2d_all[:-1], text_2d_all[-1]
-        image_2d, image_x = image_2d_all[:-1], image_2d_all[-1]
+        # 5. Correctly separate the points
+        # Base memory is everything EXCEPT the last two points
+        joint_2d = joint_2d_all[:-2]
+        joint_x_in = joint_2d_all[-2]
+        joint_x_out = joint_2d_all[-1]
 
-        # 5. Create the 2x2 grid figure
+        text_2d = text_2d_all[:-2]
+        text_x_in = text_2d_all[-2]
+        text_x_out = text_2d_all[-1]
+
+        image_2d = image_2d_all[:-2]
+        image_x_in = image_2d_all[-2]
+        image_x_out = image_2d_all[-1]
+
+        # 6. Create the 2x2 grid figure
         fig, axes = plt.subplots(2, 2, figsize=(16, 14))
-        fig.suptitle(f"t-SNE Retrieval Match (Test Sample {i})",
-                     fontsize=18, fontweight='bold')
+
+        # Set dynamic title based on prediction correctness
+        pred_text = "CORRECT" if is_correct else "INCORRECT"
+        title_color = "darkgreen" if is_correct else "darkred"
+        fig.suptitle(f"t-SNE Retrieval Match (Test Sample {i}) | Prediction: {pred_text}",
+                     fontsize=18, fontweight='bold', color=title_color)
 
         # Helper function to plot each subplot cleanly
-        def plot_axis(ax, memory_pts, input_pt, labels, names_dict, title):
+        def plot_axis(ax, memory_pts, input_pt, output_pt, labels, names_dict, title):
             # A) Plot standard memory slots
             for label_id in np.unique(labels):
                 idx = (labels == label_id)
                 display_name = names_dict.get(label_id, str(label_id))
                 ax.scatter(memory_pts[idx, 0], memory_pts[idx, 1],
-                           label=display_name, alpha=0.5, s=40)
+                           label=display_name, alpha=0.3, s=40)
 
-            # B) Highlight the Top-K retrieved memory slots (Hollow Lime Circles)
+            # B) Highlight the Top-K retrieved memory slots (Cyan Diamonds)
             ax.scatter(memory_pts[topk_positions, 0], memory_pts[topk_positions, 1],
-                       facecolors='none', edgecolors='lime', s=150, linewidths=2.5,
-                       label='Top-10 Retrieved')
+                       marker='D', facecolors='cyan', edgecolors='black', s=100, linewidths=1.2,
+                       label='Top-10 Retrieved', zorder=5)
+
+            # Add Text Labels for Top-K points
+            for pos in topk_positions:
+                x, y = memory_pts[pos, 0], memory_pts[pos, 1]
+                raw_label = labels[pos]
+                display_label = names_dict.get(
+                    raw_label, str(raw_label)) + f" {pos}"
+
+                # Annotate with a small offset and a readable background box
+                ax.annotate(display_label, (x, y), xytext=(6, 6),
+                            textcoords='offset points', fontsize=9, fontweight='bold',
+                            bbox=dict(boxstyle="round,pad=0.2",
+                                      fc="white", alpha=0.7, ec="gray"),
+                            zorder=6)
 
             # C) Plot the actual query input (Large Red Star)
             ax.scatter(input_pt[0], input_pt[1],
                        marker='*', color='red', s=400, edgecolor='black', linewidths=1,
-                       label='Input Query (x_input)')
+                       label='Input Query (x_input)', zorder=7)
+
+            # D) Plot the output query (Large Gold Triangle)
+            ax.scatter(output_pt[0], output_pt[1],
+                       marker='^', color='gold', s=350, edgecolor='black', linewidths=1,
+                       label='Output (x_output)', zorder=7)
+
+            # E) Draw an arrow pointing from x_input to x_output
+            ax.annotate("",
+                        # Target (where the arrow points)
+                        xy=(output_pt[0], output_pt[1]),
+                        # Origin (where the arrow starts)
+                        xytext=(input_pt[0], input_pt[1]),
+                        arrowprops=dict(
+                            arrowstyle="->", color="black", lw=2.5, ls="--", shrinkA=8, shrinkB=8),
+                        zorder=6)  # Kept just below the markers so it doesn't cross over them
 
             ax.set_title(title)
-            ax.legend()
+            ax.legend(loc='best')
             ax.grid(True, linestyle='--', alpha=0.5)
 
-        # Plot all 4 panels
-        plot_axis(axes[0, 0], joint_2d, joint_x, text_labels,
+        # Plot all 4 panels passing both in and out points
+        plot_axis(axes[0, 0], joint_2d, joint_x_in, joint_x_out, text_labels,
                   txt_names, "Joint Memory (Colored by Text Source)")
-        plot_axis(axes[0, 1], joint_2d, joint_x, image_labels,
+        plot_axis(axes[0, 1], joint_2d, joint_x_in, joint_x_out, image_labels,
                   img_names, "Joint Memory (Colored by Image Source)")
-        plot_axis(axes[1, 0], text_2d, text_x, text_labels,
+        plot_axis(axes[1, 0], text_2d, text_x_in, text_x_out, text_labels,
                   txt_names, "Text-Only Split (Colored by Text Source)")
-        plot_axis(axes[1, 1], image_2d, image_x, image_labels,
+        plot_axis(axes[1, 1], image_2d, image_x_in, image_x_out, image_labels,
                   img_names, "Image-Only Split (Colored by Image Source)")
 
         plt.tight_layout()
