@@ -221,7 +221,8 @@ class EpisodicMemory(nn.Module):
         self,
         episode: torch.Tensor,
         mode: str = "read_write",
-        indexes=None
+        indexes=None,
+        top_k: int = None
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         if mode == "write":
             return self.write_memory(episode), None
@@ -463,7 +464,7 @@ class MemoryAugmentedDetector(nn.Module):
         use_memory: str = "linear",
         memory_size: int = 512,
         memory_mode: str = "read_write",
-        fusion_type: str = "concat",
+        fusion_type: str = "add",
         memory_architecture: str = "joint",  # 🔥 NEW: "joint" or "split"
     ):
         super().__init__()
