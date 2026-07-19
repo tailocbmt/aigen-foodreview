@@ -212,6 +212,7 @@ distance_counts = defaultdict(int)
 count, max_count = 0, 500
 # 2. Inside your evaluation loop:
 model.eval()
+model.set_memory_mode("read")
 with torch.no_grad():
     for sample in tqdm(test, desc="Collecting Coherence Features"):
         inputs_vis = {key: tensor.unsqueeze(0).squeeze(1).to(device)
@@ -219,17 +220,25 @@ with torch.no_grad():
         input_label = sample["label"].unsqueeze(0).squeeze(1).cpu().numpy()
 
         output, retrieved = model(inputs_vis, return_memory=True)
-        # Assuming your forward pass yields the memory outputs
-        # ...
-        attn, distance_matrix = retrieved['memory_attention_weights'], retrieved['distance']
+        attn = retrieved['memory_attention_weights']  # Shape: [B, 512]
 
-        # Flatten the matrices so we can pair them up
+        # 🔥 THE FIX: Calculate relative distance directly from the memory age
+        # Instead of relying on the potentially clamped distance_matrix, we find how
+        # old each slot is compared to the most recently written item.
+        mem_age = model.episodic_memory.memory_age  # Shape: [512]
+        max_age = mem_age.max()
+
+        # Distance = (Newest Age) - (Age of this specific slot)
+        # We add 1 so the most recent item has a distance of 1
+        relative_distances = (
+            max_age - mem_age + 1).unsqueeze(0).expand(attn.size(0), -1)  # Shape: [B, 512]
+
+        # Flatten the matrices
         attn_flat = attn.cpu().numpy().flatten()
-        dist_flat = distance_matrix.cpu().numpy().flatten()
+        dist_flat = relative_distances.cpu().numpy().flatten()
 
-        # Accumulate the scores based on distance
+        # Accumulate the scores based on relative distance
         for d, a in zip(dist_flat, attn_flat):
-            # FIX 2: Explicitly cast distance to integer to prevent float-key fragmentation
             d_int = int(d)
             distance_attn_sum[d_int] += a
             distance_counts[d_int] += 1
@@ -242,15 +251,28 @@ with torch.no_grad():
 distances = sorted(list(distance_counts.keys()))
 avg_attentions = [distance_attn_sum[d] / distance_counts[d] for d in distances]
 
+# Print the first few to verify values exist!
+print(f"Debug: First 5 Distances: {distances[:5]}")
+print(f"Debug: First 5 Attentions: {avg_attentions[:5]}")
+
 # 4. Plot the results
 plt.figure(figsize=(10, 6))
-plt.plot(distances, avg_attentions,
-         label="RoPE Attention Decay", color='blue', linewidth=2)
+
+# Use both a line and dots (marker='o') so you can see the data even if it's sparse
+plt.plot(distances, avg_attentions, label="RoPE Attention Decay",
+         color='blue', linewidth=2, marker='o', markersize=4)
+
 plt.title("Empirical Validation of RoPE Distance Decay", fontsize=14)
-plt.xlabel("Temporal Distance d", fontsize=12)
+plt.xlabel("Relative Temporal Distance (Slots)", fontsize=12)
 plt.ylabel("Average Attention Score", fontsize=12)
-plt.xlim(0, 1280)  # Adjust to your memory size K
+
+# 🔥 THE FIX: Let Matplotlib auto-scale the axes by removing plt.xlim()
+# This ensures that no matter what the distances are, they will fit on the screen.
+
 plt.grid(True, linestyle='--', alpha=0.7)
 plt.legend()
+plt.tight_layout()
 plt.savefig("./evons_data/test_distance.png", dpi=300)
 plt.close()
+
+print(f"Plot successfully saved. Analyzed {count} samples.")
