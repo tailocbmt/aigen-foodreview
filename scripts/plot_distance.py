@@ -209,6 +209,7 @@ print(f'Loaded Testing File: {test_file}.')
 distance_attn_sum = defaultdict(float)
 distance_counts = defaultdict(int)
 
+count, max_count = 0, 500
 # 2. Inside your evaluation loop:
 model.eval()
 with torch.no_grad():
@@ -230,6 +231,10 @@ with torch.no_grad():
         for d, a in zip(dist_flat, attn_flat):
             distance_attn_sum[d] += a
             distance_counts[d] += 1
+
+        count += 1
+        if count > max_count:
+            break
 
 # 3. Aggregate the final averages
 distances = sorted(list(distance_counts.keys()))
