@@ -90,15 +90,26 @@ elif model_name == 'fakenews':
     if MODEL_MODE == "w/o mem":
         model = FakeNewsMultimodal(output_dim=output_dim)
     elif MODEL_MODE == "w/ mem":
-        model = FakeNewsMultimodalWMemory(
-            out_dim=output_dim,
-            use_memory=use_memory,
-            memory_architecture=memory_architecture,
-            memory_size=MEMORY_SIZE,
-            feature_dim=FEATURE_DIM,
-            text_backbone=TEXT_BACKBONE,
-            vision_backbone=VISION_BACKBONE
-        )
+        if freeze_backbone is True:
+            model = FakeNewsMultimodalTMemoryOnly(
+                out_dim=output_dim,
+                use_memory=use_memory,
+                memory_architecture=memory_architecture,
+                memory_size=MEMORY_SIZE,
+                feature_dim=FEATURE_DIM,
+                text_backbone=TEXT_BACKBONE,
+                vision_backbone=VISION_BACKBONE
+            )
+        else:
+            model = FakeNewsMultimodalWMemory(
+                out_dim=output_dim,
+                use_memory=use_memory,
+                memory_architecture=memory_architecture,
+                memory_size=MEMORY_SIZE,
+                feature_dim=FEATURE_DIM,
+                text_backbone=TEXT_BACKBONE,
+                vision_backbone=VISION_BACKBONE
+            )
     elif MODEL_MODE == "w/ coatt":
         model = FakeNewsMultimodalCoAttention(output_dim=output_dim)
     elif MODEL_MODE == "w/ coatt + mem":
@@ -130,26 +141,8 @@ elif model_name == 'fakenews_separate':
 else:
     pass
 
-if model_name != 'fakenews_separate' and freeze_backbone is False:
+if model_name != 'fakenews_separate':
     model.load_state_dict(torch.load(weights_dir))
-
-if freeze_backbone is True:
-    weights = os.listdir(output_dir)
-    weights = sorted(weights, key=lambda x: int(x.split('-')[1].split('.')[0]))
-    weights = weights[-1]
-    weights_dir = os.path.join(output_dir, weights)
-
-    model = FakeNewsMultimodalTMemoryOnly(
-        out_dim=output_dim,
-        use_memory=use_memory,
-        memory_architecture=memory_architecture,
-        memory_size=MEMORY_SIZE,
-        feature_dim=FEATURE_DIM,
-        text_backbone=TEXT_BACKBONE,
-        vision_backbone=VISION_BACKBONE
-    )
-    model = FakeNewsMultimodalTMemoryOnly.load_episodic_memory_weights_only(
-        model, weights_dir)
 
 model = model.to(device)
 print(f'Model {model_name} loaded at weights: {weights}.')
