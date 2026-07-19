@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score, hamming_loss, precision_score, recal
 from torch.utils.data import DataLoader, Subset
 from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, EvonsOfflineMultimodalWDctDataset, HintsOfTruthMultimodalDataset, AIGenFoodMultimodalDataset, RAIDMultimodalDataset, DefactifyMultimodalDataset, SemEval2024MultimodalDataset
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
-from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, FakeNewsSeparate, NetShareFusionCLIP
+from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalTMemoryOnly, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, FakeNewsSeparate, NetShareFusionCLIP
 from modules.utils import multilabel_accuracy
 
 # CONFIG
@@ -23,6 +23,7 @@ with open(config_path, 'r') as file:
 # Extract values into variables
 # Options for model_name: 'clip', 'flava'
 model_name = config.get('model_name', 'clip')
+freeze_backbone = config.get('freeze_backbone', False)
 use_memory = config.get('use_memory', 'linear')
 memory_architecture = config.get('memory_architecture', 'joint')
 MODEL_MODE = config.get('mode', "w/o memory")
@@ -129,8 +130,26 @@ elif model_name == 'fakenews_separate':
 else:
     pass
 
-if model_name != 'fakenews_separate':
+if model_name != 'fakenews_separate' and freeze_backbone is False:
     model.load_state_dict(torch.load(weights_dir))
+
+if freeze_backbone is True:
+    weights = os.listdir(output_dir)
+    weights = sorted(weights, key=lambda x: int(x.split('-')[1].split('.')[0]))
+    weights = weights[-1]
+    weights_dir = os.path.join(output_dir, weights)
+
+    model = FakeNewsMultimodalTMemoryOnly(
+        out_dim=output_dim,
+        use_memory=use_memory,
+        memory_architecture=memory_architecture,
+        memory_size=MEMORY_SIZE,
+        feature_dim=FEATURE_DIM,
+        text_backbone=TEXT_BACKBONE,
+        vision_backbone=VISION_BACKBONE
+    )
+    model = FakeNewsMultimodalTMemoryOnly.load_episodic_memory_weights_only(
+        model, weights_dir)
 
 model = model.to(device)
 print(f'Model {model_name} loaded at weights: {weights}.')
