@@ -533,23 +533,34 @@ def run_experiment_6_from_model(
         max_samples=None   # set to e.g. 500 for quick test
     )
 
-    print(f"✅ Collected {len(accumulator.x_image_list)} samples")
-
-    # Step 2: Analyze
-    stats_df, df = analyze_accumulated_results(
-        accumulator, output_dir=output_dir)
-
-    # Final summary
+    p  # ====== ✅ FIXED PRINTING SECTION ======
     print("\n" + "=" * 70)
     print("📌 KEY FINDINGS FOR YOUR PROFESSOR:")
     print("=" * 70)
-    for _, row in stats_df.iterrows():
-        sig = "✅ SIGNIFICANT" if row['Significant (p < 0.001)'] else "❌ NOT significant"
-        print(f"{row['Group']}:")
+
+    # Check if stats_df contains group-specific information
+    if 'Group' in stats_df.columns:
+        # Original per‑group version
+        for _, row in stats_df.iterrows():
+            # Try both possible column names
+            sig_col = 'Significant (p < 0.001)' if 'Significant (p < 0.001)' in stats_df.columns else 'Significant (p<0.001)'
+            sig = "✅ SIGNIFICANT" if row[sig_col] else "❌ NOT significant"
+            print(f"{row['Group']}:")
+            print(
+                f"  Delta = {row['Delta (Post - Pre)']:.4f} (p={row['p-value']:.2e}) {sig}")
+    else:
+        # Aggregated version (single row)
+        row = stats_df.iloc[0]
         print(
-            f"  Delta = {row['Delta (Post - Pre)']:.4f} (p={row['p-value']:.2e}) {sig}")
+            f"Overall Delta (Post - Pre) = {row['Delta-Mean']:.4f} ± {row['Delta-Std']:.4f}")
+        print(f"p-value = {row['p-value']:.2e} (paired t‑test)")
+        if row['p-value'] < 0.001:
+            print("✅ OVERALL EFFECT IS SIGNIFICANT (p < 0.001)")
+        else:
+            print("❌ Not significant at p < 0.001")
 
     print(f"\n📁 All results saved to: {output_dir}")
+
     return stats_df, df
 
 
