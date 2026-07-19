@@ -359,10 +359,10 @@ def get_group_id(text_label: np.ndarray, image_label: np.ndarray) -> np.ndarray:
 
 def get_group_name(gid: int) -> str:
     mapping = {
-        0: "Real-Real [0,0] (Coherent, Auth.)",
-        1: "Real-Fake [0,1] (Mismatched)",
-        2: "Fake-Real [1,0] (Mismatched)",
-        3: "Fake-Fake [1,1] (Coherent, Synth.)"
+        0: "Real-Real [0,0]",
+        1: "Real-Fake [0,1]",
+        2: "Fake-Real [1,0]",
+        3: "Fake-Fake [1,1]"
     }
     return mapping.get(gid, f"Unknown Group {gid}")
 
@@ -458,7 +458,8 @@ def analyze_accumulated_results(
                 ha='center', va='center', fontsize=10, fontweight='bold',
                 bbox=dict(facecolor='white', alpha=0.8, edgecolor='gray'))
 
-    plt.title('Cross-Modal Cosine Similarity: Pre-Memory vs Post-Memory\n(Multi-Label Stratification)', fontsize=14)
+    plt.title(
+        'Cross-Modal Cosine Similarity: Pre-Memory vs Post-Memory', fontsize=14)
     plt.xlabel('Composition Type', fontsize=12)
     plt.ylabel('Cosine Similarity', fontsize=12)
     plt.xticks(rotation=15, ha='right')
@@ -489,7 +490,7 @@ def analyze_accumulated_results(
                  ha='center', va='bottom' if mean_val >= 0 else 'top',
                  fontsize=11, fontweight='bold')
 
-    plt.title('Δ Cross-Modal Similarity: Post-Memory - Pre-Memory\n(Positive = Enhanced Coherence, Negative = Exposed Mismatch)', fontsize=14)
+    plt.title('Δ Cross-Modal Similarity: Post-Memory - Pre-Memory', fontsize=14)
     plt.ylabel('Δ Cosine Similarity (Post - Pre)', fontsize=12)
     plt.xticks(rotation=15, ha='right')
     plt.grid(axis='y', linestyle='--', alpha=0.3)
