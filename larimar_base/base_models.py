@@ -562,9 +562,9 @@ class MemoryAugmentedDetector(nn.Module):
 
             if self.memory_mode in ["read", "read_write"]:
                 # Read from respective memories
-                retrieved_t, attn_t = self.episodic_memory_t(
+                retrieved_t, attn_t, _ = self.episodic_memory_t(
                     x_t, self.memory_mode, indexes=indexes)
-                retrieved_v, attn_v = self.episodic_memory_v(
+                retrieved_v, attn_v, _ = self.episodic_memory_v(
                     x_v, self.memory_mode, indexes=indexes)
 
                 # Fuse independently
