@@ -533,6 +533,11 @@ def run_experiment_6_from_model(
         max_samples=None   # set to e.g. 500 for quick test
     )
 
+    print(f"✅ Collected {len(accumulator.x_image_list)} samples")
+
+    stats_df, df = analyze_accumulated_results(
+        accumulator, output_dir=output_dir)
+
     # ====== ✅ FIXED PRINTING SECTION ======
     print("\n" + "=" * 70)
     print("📌 KEY FINDINGS FOR YOUR PROFESSOR:")
