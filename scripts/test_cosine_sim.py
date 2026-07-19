@@ -371,133 +371,135 @@ def analyze_accumulated_results(
     accumulator: CoherenceAccumulator,
     output_dir: str = "./experiment_6_results"
 ):
-    """Run statistical analysis and generate plots from accumulated features."""
+    """Run statistical analysis and generate plots (aggregated across all samples)."""
     os.makedirs(output_dir, exist_ok=True)
 
     # === Convert accumulator to results dict ===
     results = accumulator.get_results()
 
-    # === Compute similarities ===
-    pre_sim = compute_cca_similarity(
-        results['x_image'], results['x_text'])
-    post_sim = compute_cca_similarity(
-        results['o_image'], results['o_text'])
+    # === Compute similarities (using your chosen metric) ===
+    # IMPORTANT: If you are still using separate CCA, this may be flawed.
+    # Consider using the fixed-CCA approach (fit on pre, transform both).
+    # For now, we keep your existing compute_cca_similarity.
+    pre_sim = compute_cca_similarity(results['x_image'], results['x_text'])
+    post_sim = compute_cca_similarity(results['o_image'], results['o_text'])
     delta = post_sim - pre_sim
 
-    # === Build DataFrame ===
-    group_id = get_group_id(results['text_label'], results['image_label'])
-
+    # === Build DataFrame (no grouping) ===
     df = pd.DataFrame({
-        'group_id': group_id,
-        'text_label': results['text_label'],
-        'image_label': results['image_label'],
         'pre_sim': pre_sim,
         'post_sim': post_sim,
         'delta': delta
     })
-    df['group_name'] = df['group_id'].apply(get_group_name)
 
     # Save full results
-    csv_path = os.path.join(output_dir, 'coherence_results_full.csv')
+    csv_path = os.path.join(output_dir, 'coherence_results_aggregated.csv')
     df.to_csv(csv_path, index=False)
     print(f"✅ Saved per-sample results to {csv_path}")
 
-    # === Statistical Summary ===
-    stats = []
-    for gid in sorted(df['group_id'].unique()):
-        subset = df[df['group_id'] == gid]
-        n = len(subset)
-        pre_mean = subset['pre_sim'].mean()
-        post_mean = subset['post_sim'].mean()
-        delta_mean = subset['delta'].mean()
-        t_stat, p_val = ttest_rel(subset['pre_sim'], subset['post_sim'])
-        stats.append({
-            'Group': get_group_name(gid),
-            'N': n,
-            'Pre-Sim (Mean)': pre_mean,
-            'Post-Sim (Mean)': post_mean,
-            'Delta (Post - Pre)': delta_mean,
-            't-statistic': t_stat,
-            'p-value': p_val,
-            'Significant (p < 0.001)': p_val < 0.001
-        })
-
-    stats_df = pd.DataFrame(stats)
-    stats_csv = os.path.join(output_dir, 'coherence_statistics.csv')
-    stats_df.to_csv(stats_csv, index=False)
+    # === Overall Statistics ===
+    n = len(df)
+    pre_mean = df['pre_sim'].mean()
+    post_mean = df['post_sim'].mean()
+    delta_mean = df['delta'].mean()
+    delta_std = df['delta'].std()
+    t_stat, p_val = ttest_rel(df['pre_sim'], df['post_sim'])
 
     print("\n" + "=" * 70)
-    print("📊 STATISTICAL SUMMARY")
+    print("📊 AGGREGATED STATISTICS (All Samples)")
     print("=" * 70)
-    print(stats_df.to_string(index=False))
+    print(f"N = {n}")
+    print(
+        f"Pre-Memory Similarity (mean ± std) = {pre_mean:.4f} ± {df['pre_sim'].std():.4f}")
+    print(
+        f"Post-Memory Similarity (mean ± std) = {post_mean:.4f} ± {df['post_sim'].std():.4f}")
+    print(f"Delta (Post - Pre) = {delta_mean:.4f} ± {delta_std:.4f}")
+    print(
+        f"Paired t-test: t = {t_stat:.4f}, p = {p_val:.2e} (significant: {p_val < 0.001})")
 
-    # === Plot 1: Boxplot (Pre vs Post) ===
-    plt.figure(figsize=(12, 6))
-    df_melt = df.melt(
-        id_vars=['group_id', 'group_name'],
-        value_vars=['pre_sim', 'post_sim'],
-        var_name='stage',
-        value_name='cosine_similarity'
-    )
-    df_melt['stage'] = df_melt['stage'].map(
-        {'pre_sim': 'Pre-Memory', 'post_sim': 'Post-Memory'})
+    # Save statistics
+    stats_df = pd.DataFrame([{
+        'N': n,
+        'Pre-Mean': pre_mean,
+        'Pre-Std': df['pre_sim'].std(),
+        'Post-Mean': post_mean,
+        'Post-Std': df['post_sim'].std(),
+        'Delta-Mean': delta_mean,
+        'Delta-Std': delta_std,
+        't-statistic': t_stat,
+        'p-value': p_val,
+        'Significant (p<0.001)': p_val < 0.001
+    }])
+    stats_csv = os.path.join(output_dir, 'coherence_statistics_aggregated.csv')
+    stats_df.to_csv(stats_csv, index=False)
 
-    ax = sns.boxplot(
-        data=df_melt,
-        x='group_name',
-        y='cosine_similarity',
-        hue='stage',
-        palette={'Pre-Memory': '#4C72B0', 'Post-Memory': '#DD8452'},
-        linewidth=1.2
-    )
+    # === Plot 1: Boxplot (Pre vs Post) - TWO BARS ===
+    plt.figure(figsize=(6, 8))
+    # Prepare data for boxplot
+    data_to_plot = [df['pre_sim'].values, df['post_sim'].values]
+    labels = ['Pre-Memory', 'Post-Memory']
 
-    # Add delta annotations
-    for i, gid in enumerate(sorted(df['group_id'].unique())):
-        delta_mean = df[df['group_id'] == gid]['delta'].mean()
-        ax.text(i, 0.92, f'Δ = {delta_mean:.3f}',
-                ha='center', va='center', fontsize=10, fontweight='bold',
-                bbox=dict(facecolor='white', alpha=0.8, edgecolor='gray'))
+    bp = plt.boxplot(data_to_plot, labels=labels, patch_artist=True,
+                     medianprops=dict(linewidth=2, color='black'),
+                     whiskerprops=dict(linewidth=1.5),
+                     capprops=dict(linewidth=1.5),
+                     boxprops=dict(linewidth=1.5))
+
+    # Color the boxes
+    colors = ['#4C72B0', '#DD8452']
+    for patch, color in zip(bp['boxes'], colors):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.7)
+
+    # Add delta annotation
+    plt.text(0.5, 0.95, f'Δ = {delta_mean:.4f} (p={p_val:.2e})',
+             ha='center', va='center', fontsize=12, fontweight='bold',
+             transform=plt.gca().transAxes,
+             bbox=dict(facecolor='white', alpha=0.8, edgecolor='gray'))
 
     plt.title(
-        'Cross-Modal Cosine Similarity: Pre-Memory vs Post-Memory', fontsize=14)
-    plt.xlabel('Composition Type', fontsize=12)
-    plt.ylabel('Cosine Similarity', fontsize=12)
-    plt.xticks(rotation=15, ha='right')
-    plt.legend(title='Feature Stage', loc='upper left')
+        'Cross-Modal Similarity: Pre-Memory vs Post-Memory', fontsize=14)
+    plt.ylabel('Similarity', fontsize=12)
     plt.grid(axis='y', linestyle='--', alpha=0.3)
     plt.tight_layout()
-    boxplot_path = os.path.join(output_dir, 'coherence_boxplot.png')
+    boxplot_path = os.path.join(output_dir, 'coherence_boxplot_aggregated.png')
     plt.savefig(boxplot_path, dpi=300)
-    print(f"✅ Saved boxplot to {boxplot_path}")
+    print(f"✅ Saved aggregated boxplot to {boxplot_path}")
 
-    # === Plot 2: Delta Bar Chart ===
-    plt.figure(figsize=(10, 6))
-    group_names = [get_group_name(gid)
-                   for gid in sorted(df['group_id'].unique())]
-    means = df.groupby('group_id')['delta'].mean()
-    stds = df.groupby('group_id')['delta'].std()
-    colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D']
-
-    bars = plt.bar(group_names, means, yerr=stds, capsize=8,
-                   color=colors, alpha=0.8, edgecolor='black', linewidth=1.2)
-
+    # === Plot 2: Single Delta Bar with Error ===
+    plt.figure(figsize=(6, 6))
+    plt.bar(['Δ (Post - Pre)'], [delta_mean], yerr=delta_std,
+            capsize=10, color='#2E86AB', alpha=0.8,
+            edgecolor='black', linewidth=1.5)
     plt.axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.5)
-
-    for bar, mean_val in zip(bars, means):
-        plt.text(bar.get_x() + bar.get_width()/2,
-                 bar.get_height() + 0.01 if bar.get_height() >= 0 else bar.get_height() - 0.03,
-                 f'{mean_val:.3f}',
-                 ha='center', va='bottom' if mean_val >= 0 else 'top',
-                 fontsize=11, fontweight='bold')
-
-    plt.title('Δ Cross-Modal Similarity: Post-Memory - Pre-Memory', fontsize=14)
-    plt.ylabel('Δ Cosine Similarity (Post - Pre)', fontsize=12)
-    plt.xticks(rotation=15, ha='right')
+    # Annotate value
+    plt.text(0, delta_mean + 0.01 if delta_mean >= 0 else delta_mean - 0.01,
+             f'{delta_mean:.4f}', ha='center', va='bottom' if delta_mean >= 0 else 'top',
+             fontsize=12, fontweight='bold')
+    plt.title('Mean Delta (Post - Pre) Across All Samples', fontsize=14)
+    plt.ylabel('Δ Similarity', fontsize=12)
     plt.grid(axis='y', linestyle='--', alpha=0.3)
     plt.tight_layout()
-    barplot_path = os.path.join(output_dir, 'coherence_delta_barchart.png')
+    barplot_path = os.path.join(output_dir, 'coherence_delta_aggregated.png')
     plt.savefig(barplot_path, dpi=300)
-    print(f"✅ Saved delta bar chart to {barplot_path}")
+    print(f"✅ Saved aggregated delta bar chart to {barplot_path}")
+
+    # Optional: Scatter plot of Pre vs Post (to see individual shifts)
+    plt.figure(figsize=(6, 6))
+    plt.scatter(df['pre_sim'], df['post_sim'], alpha=0.3, s=5, color='gray')
+    # Diagonal line
+    min_val = min(df['pre_sim'].min(), df['post_sim'].min())
+    max_val = max(df['pre_sim'].max(), df['post_sim'].max())
+    plt.plot([min_val, max_val], [min_val, max_val],
+             'r--', linewidth=2, label='y=x')
+    plt.xlabel('Pre-Memory Similarity')
+    plt.ylabel('Post-Memory Similarity')
+    plt.title('Per-Sample Shift: Pre vs Post Memory')
+    plt.legend()
+    plt.grid(alpha=0.3)
+    scatter_path = os.path.join(output_dir, 'coherence_scatter_aggregated.png')
+    plt.savefig(scatter_path, dpi=300)
+    print(f"✅ Saved scatter plot to {scatter_path}")
 
     return stats_df, df
 
