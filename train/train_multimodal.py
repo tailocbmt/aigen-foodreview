@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score, f1_score, hamming_loss, precision_sc
 from torch.utils.data import DataLoader, Subset
 from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, MultimodalDataset, HintsOfTruthMultimodalDataset, EvonsOfflineMultimodalWDctDataset
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
-from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, FakeNewsSeparate, NetShareFusionCLIP, FakeNewsMultimodalTMemoryOnly
+from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, FakeNewsSeparate, NetShareFusionCLIP, FakeNewsMultimodalTMemoryOnly, FakeNewsMultimodalFinetune
 import torch.nn as nn
 from modules.utils import multilabel_accuracy
 try:
@@ -166,7 +166,7 @@ if freeze_backbone is True:
     weights = weights[-1]
     weights_dir = os.path.join(output_dir, weights)
 
-    model = FakeNewsMultimodalTMemoryOnly(
+    model = FakeNewsMultimodalFinetune(
         out_dim=output_dim,
         use_memory=use_memory,
         memory_architecture=memory_architecture,
@@ -175,16 +175,16 @@ if freeze_backbone is True:
         text_backbone=TEXT_BACKBONE,
         vision_backbone=VISION_BACKBONE
     )
-    model = FakeNewsMultimodalTMemoryOnly.load_episodic_memory_weights_only(
-        model, weights_dir)
+    # model = FakeNewsMultimodalTMemoryOnly.load_episodic_memory_weights_only(
+    # model, weights_dir)
 
     # 2. Freeze the ENTIRE model first
     for param in model.parameters():
         param.requires_grad = False
 
     # 3. Unfreeze ONLY the feature_projection
-    for param in model.feature_projection.parameters():
-        param.requires_grad = True
+    # for param in model.feature_projection.parameters():
+        # param.requires_grad = True
 
     # 4. Unfreeze ONLY the classifier
     for param in model.classifier.parameters():
