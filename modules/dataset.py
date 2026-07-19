@@ -824,10 +824,17 @@ class AIGenFoodMultimodalDataset(Dataset):
             ],
             dtype=torch.float
         )
+        indexes = torch.tensor(
+            [
+                index
+            ],
+            dtype=torch.long
+        )
 
         return {
             "inputs": inputs,
             "label": labels,
+            "index": indexes
         }
 
     def tokenize(self, text: list, images: list):
