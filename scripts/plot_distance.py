@@ -229,8 +229,10 @@ with torch.no_grad():
 
         # Accumulate the scores based on distance
         for d, a in zip(dist_flat, attn_flat):
-            distance_attn_sum[d] += a
-            distance_counts[d] += 1
+            # FIX 2: Explicitly cast distance to integer to prevent float-key fragmentation
+            d_int = int(d)
+            distance_attn_sum[d_int] += a
+            distance_counts[d_int] += 1
 
         count += 1
         if count > max_count:
@@ -251,3 +253,4 @@ plt.xlim(0, 1280)  # Adjust to your memory size K
 plt.grid(True, linestyle='--', alpha=0.7)
 plt.legend()
 plt.savefig("./evons_data/test_distance.png", dpi=300)
+plt.close()
