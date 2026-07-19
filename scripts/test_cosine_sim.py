@@ -533,7 +533,7 @@ def run_experiment_6_from_model(
         max_samples=None   # set to e.g. 500 for quick test
     )
 
-    p  # ====== ✅ FIXED PRINTING SECTION ======
+    # ====== ✅ FIXED PRINTING SECTION ======
     print("\n" + "=" * 70)
     print("📌 KEY FINDINGS FOR YOUR PROFESSOR:")
     print("=" * 70)
