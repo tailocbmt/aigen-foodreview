@@ -8,7 +8,7 @@ import logging
 from torch.optim import AdamW
 from sklearn.metrics import accuracy_score, f1_score, hamming_loss, precision_score, recall_score
 from torch.utils.data import DataLoader, Subset
-from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, MultimodalDataset, HintsOfTruthMultimodalDataset, EvonsOfflineMultimodalWDctDataset
+from modules.dataset import EvonsMultimodalDataset, EvonsOfflineMultimodalDataset, HintsOfTruthMultimodalDataset, EvonsOfflineMultimodalWDctDataset, AIGenFoodMultimodalDataset
 from larimar_base.base_models import CLIPDetector, CLIPDetectorWMemory, FLAVADetector, FLAVADetectorWMemory
 from larimar_base.multi_label_models import CLIPDetectorWMemoryCoAttention, FakeNewsMultimodal, FakeNewsMultimodalCoAttention, FakeNewsMultimodalWMemory, FakeNewsMultimodalWMemoryCoAttention, FakeNewsSeparate, NetShareFusionCLIP, FakeNewsMultimodalTMemoryOnly, FakeNewsMultimodalFinetune
 import torch.nn as nn
@@ -240,6 +240,11 @@ elif dataset == "fakenews":
         train_file, image_dir, processor, MAX_LENGTH)
     val = EvonsOfflineMultimodalDataset(
         val_file, image_dir, processor, MAX_LENGTH)
+elif dataset == "foodreview":
+    train = AIGenFoodMultimodalDataset(
+        train_file, image_dir, processor, MAX_LENGTH)
+    val = AIGenFoodMultimodalDataset(
+        train_file, image_dir, processor, MAX_LENGTH)
 else:
     train = EvonsOfflineMultimodalWDctDataset(
         train_file, image_dir, processor, MAX_LENGTH)
