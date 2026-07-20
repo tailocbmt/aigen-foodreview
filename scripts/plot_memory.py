@@ -391,14 +391,16 @@ def plot_mismatch_example(folder, SEED=42):
 
         # Subtitle: Anchor 1 joins the Text label and its colored status
 # Subtitle - moved slightly down from the main title (y=0.94)
-        fig.text(0.42, 0.94, "Text: ",
+        # Shifted left to 0.35
+        fig.text(0.35, 0.94, "Text: ",
                  ha='right', fontsize=16, fontweight='bold')
-        fig.text(0.42, 0.94, text_status, ha='left', fontsize=16,
+        fig.text(0.35, 0.94, text_status, ha='left', fontsize=16,
                  fontweight='bold', color=text_color)
 
-        fig.text(0.55, 0.94, "Image: ", ha='right',
+        # Shifted right to 0.65
+        fig.text(0.65, 0.94, "Image: ", ha='right',
                  fontsize=16, fontweight='bold')
-        fig.text(0.55, 0.94, image_status, ha='left', fontsize=16,
+        fig.text(0.65, 0.94, image_status, ha='left', fontsize=16,
                  fontweight='bold', color=image_color)
         # -------------------------------
 
@@ -480,7 +482,7 @@ def plot_mismatch_example(folder, SEED=42):
         plot_axis(axes[1, 1], image_2d, image_x_in, image_x_out, image_labels,
                   img_names, "Image-Only Split (Colored by Image Source)")
 
-        plt.tight_layout(rect=[0, 0, 1, 0.88])
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
 
         # Save with dynamic filename so they don't overwrite each other
         save_path = os.path.join(folder, f"example_{i}_tsne.png")
